@@ -5,6 +5,15 @@
 # レポート化したい市場（複数指定すると全て横断集計される）。
 # レギュラー古着・ビンテージ古着を問わず網羅するため、汎用ワードと
 # ビンテージ特化ワードの両方を入れてある。
+#
+# ここに書く汎用ワード・watch_brandsに加えて、collect_all()は
+# config/brand_catalog.yaml（定番ブランド×代表モデルを約400件収録）からも
+# 「ブランド名 モデル名」の検索キーワードを自動生成する。これにより
+# ヤフオク/メルカリの収集がブランド単位の粗い集計に留まらず、型番/モデル
+# レベルのトレンド分析ができるだけのボリュームを取りに行く（数百キーワード
+# 規模になるため、下記sourcesのmax_pages_per_keyword/max_items_per_keywordは
+# 1キーワードあたりを絞る代わりにキーワード数の広さでカバーする設計にして
+# ある。詳細はbrand_catalog.yaml冒頭のコメント参照）。
 keywords:
   - "古着"
   - "古着 メンズ"
@@ -35,16 +44,21 @@ sources:
     # https://auctions.yahoo.co.jp/closedsearch/closedsearch/<keyword>/0 を使用。
     # 2ページ目以降は ?b=<開始位置> 方式を試みる（未確認・実験的。失敗しても1ページ目
     # の結果はそのまま使われる＝悪化はしない）。
-    max_pages_per_keyword: 3          # 1ページ ~50件。控えめな既定値。
-    request_interval_sec: 2.5         # 相手サーバー負荷を抑えるための最小間隔
+    # brand_catalog.yaml導入でキーワード数が十数個から数百個に増えたため、1キーワード
+    # あたりのページ数を絞ってキーワードの「広さ」でボリュームを稼ぐ設計に変更（ニッチな
+    # ブランド×モデルの組み合わせは元々1ページで収まることがほとんど）。
+    max_pages_per_keyword: 1          # 1ページ ~50件。
+    request_interval_sec: 2.0         # 相手サーバー負荷を抑えるための最小間隔
 
   mercari:
     enabled: true
     # ヘッドレスブラウザ（Playwright/Chromium）でレンダリングして収集する。
     # それでも反スクレイピング対策の変更で壊れる可能性はあるため best-effort。
     # 失敗時は data/manual/ に置いた手動エクスポートCSVへ自動フォールバックする。
-    max_items_per_keyword: 100
-    request_interval_sec: 3.0
+    # yahoo_auction同様、brand_catalog.yaml由来のキーワード数増加に合わせて
+    # 1キーワードあたりの件数を控えめにし、幅広いキーワードでカバーする。
+    max_items_per_keyword: 20
+    request_interval_sec: 2.0
     status: "sold_out"                # 成約済みのみ対象
 
   base_ec:

@@ -3,7 +3,12 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from src.pipeline.collect import _build_search_keywords, _fill_missing_brands, _fill_missing_category
+from src.pipeline.collect import (
+    _build_search_keywords,
+    _fill_missing_brands,
+    _fill_missing_category,
+    _fill_missing_model,
+)
 from src.pipeline.normalize import MarketItem
 
 
@@ -51,3 +56,25 @@ def test_build_search_keywords_adds_brand_combos():
     assert "古着" in keywords
     assert "Champion 古着" in keywords
     assert "Levi's 古着" in keywords
+
+
+def test_build_search_keywords_adds_catalog_model_combos():
+    config = {"keywords": ["古着"], "watch_brands": []}
+    catalog = [{"brand": "Champion", "tier": "regular", "models": ["リバースウィーブ", "T1011"]}]
+    keywords = _build_search_keywords(config, catalog)
+    assert "Champion リバースウィーブ" in keywords
+    assert "Champion T1011" in keywords
+
+
+def test_fill_missing_model_only_matches_within_the_items_own_brand():
+    items = [
+        MarketItem(source="mercari", title="Champion 90s リバースウィーブ 刺繍ロゴ", price=8000, brand="Champion"),
+        MarketItem(source="mercari", title="ノーブランド リバースウィーブ風 スウェット", price=3000, brand=None),
+        MarketItem(source="manual", title="Levi's 501 66前期", price=12000, brand="Levi's", model="already-set"),
+    ]
+    model_index = {"Champion": ["リバースウィーブ", "T1011"], "Levi's": ["501", "505"]}
+    _fill_missing_model(items, model_index)
+
+    assert items[0].model == "リバースウィーブ"
+    assert items[1].model is None  # no brand tagged, so model matching is skipped
+    assert items[2].model == "already-set"  # pre-set value is never overwritten

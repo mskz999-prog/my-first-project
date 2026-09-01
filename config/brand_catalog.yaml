@@ -1,0 +1,973 @@
+# ==========================================================================
+# 古着せどり 定番ブランド×代表モデル/型番 カタログ
+# ==========================================================================
+# レギュラー古着・ビンテージ古着を問わず、日本の古着せどり・バイヤー界隈で
+# 定番として扱われるブランドと、検索キーワードとして機能する代表的な
+# モデル名・型番・通称タグを列挙したもの。
+#
+# 用途:
+#   1. collect.py がここから「ブランド名 + モデル名」の組み合わせキーワードを
+#      生成し、ヤフオク/メルカリを検索してより解像度の高い実売データを集める
+#      （config.yaml の watch_brands はブランド単位の粗い集計用、こちらは
+#      アイテム/型番レベルのトレンド分析用）。
+#   2. collect.py がタイトルマッチングでスクレイピング済みアイテムに
+#      brand / model を事後的にタグ付けする際の辞書としても使う。
+#
+# tier:
+#   regular          = 現行品でも定番的に流通し、サイズ調達しやすいブランド
+#   vintage-specialty = 実物ミリタリー・Americana・古着専門店で扱われる
+#                        年代物中心のブランド
+#   streetwear       = ストリート/Y2K系（古着屋でも取り扱いが多い）
+#   outdoor          = アウトドア/機能系
+#   denim-japan      = 日本製レプリカ/リジッドデニムブランド（国内古着市場で
+#                        独自の高需要がある）
+#   sports-license   = スポーツリーグ/大学ライセンスもの（NFL/NBA/MLB/NCAA等）
+#
+# モデル名は「実売検索で使われる通称・略称」を優先しており、必ずしも
+# メーカーの正式な型番表記と一致しない場合がある（例: 「赤耳」「ビッグE」は
+# タグ・仕様の通称）。
+
+catalog:
+  # --- regular: 定番カジュアル -----------------------------------------
+  - brand: "Champion"
+    tier: "regular"
+    models: ["リバースウィーブ", "T1011", "カレッジT", "アクションバックパーカー", "ジップパーカー", "ラグランTシャツ", "USA製スウェット", "ワッフルサーマル", "ラガーシャツ"]
+
+  - brand: "Levi's"
+    tier: "regular"
+    models: ["501", "505", "517", "506", "507", "646", "550", "赤耳", "ビッグE", "66前期", "66後期", "オレンジタブ", "70505", "517ブーツカット"]
+
+  - brand: "Lee"
+    tier: "regular"
+    models: ["101", "200", "ライダースジャケット", "ペインターパンツ", "ユニオンオール", "カバーオール"]
+
+  - brand: "Wrangler"
+    tier: "regular"
+    models: ["11MJ", "13MJ", "11MWZ", "ウエスタンシャツ", "936デニム"]
+
+  - brand: "Carhartt"
+    tier: "regular"
+    models: ["ダックジャケット", "アクティブジャケット", "デトロイトジャケット", "オーバーオール", "ダブルニーパンツ", "ミシガンチョアコート", "カーペンターパンツ", "サンテフェジャケット", "フーデッドスウェット"]
+
+  - brand: "Dickies"
+    tier: "regular"
+    models: ["874", "ワークシャツ", "カバーオール", "ペインターパンツ"]
+
+  - brand: "Patagonia"
+    tier: "regular"
+    models: ["シンチラ", "レトロX", "スナップT", "ベターセーター", "ナノパフ", "バギーズ", "R1フリース", "インフルノジャケット", "キャプリーン", "ダスパーカー", "マイクロパフ"]
+
+  - brand: "THE NORTH FACE"
+    tier: "regular"
+    models: ["マウンテンパーカー", "ヌプシ", "デナリジャケット", "バルトロライトジャケット", "マウンテンライトジャケット", "スカジャン"]
+
+  - brand: "Columbia"
+    tier: "regular"
+    models: ["バガブーツジャケット", "フリース", "マウンテンパーカー"]
+
+  - brand: "L.L.Bean"
+    tier: "regular"
+    models: ["フィールドコート", "ノルウェージャンセーター", "ボートアンドトート"]
+
+  - brand: "Eddie Bauer"
+    tier: "regular"
+    models: ["ダウンジャケット", "カラコルムパーカー"]
+
+  - brand: "Woolrich"
+    tier: "regular"
+    models: ["ウールシャツ", "アークティックパーカー"]
+
+  - brand: "Pendleton"
+    tier: "regular"
+    models: ["ウールシャツ", "フラップポケットシャツ"]
+
+  - brand: "Filson"
+    tier: "regular"
+    models: ["マッキーノクルーザー", "オイルドフィールドジャケット"]
+
+  - brand: "Timberland"
+    tier: "regular"
+    models: ["6インチブーツ", "フィールドジャケット"]
+
+  - brand: "Nike"
+    tier: "regular"
+    models: ["トラックジャケット", "ヴィンテージパーカー", "スウォッシュT", "ACGジャケット", "ナイロンジャケット", "ウインドブレーカー"]
+
+  - brand: "adidas"
+    tier: "regular"
+    models: ["トレフォイルジャージ", "オリジナルストラックトップ", "ファイヤーバードジャージ", "トラックパンツ", "スタンスミス"]
+
+  - brand: "New Balance"
+    tier: "regular"
+    models: ["990", "574", "993", "996", "スウェット"]
+
+  - brand: "Reebok"
+    tier: "regular"
+    models: ["クラシックジャージ", "ヴィンテージスウェット"]
+
+  - brand: "PUMA"
+    tier: "regular"
+    models: ["トラックジャケット"]
+
+  - brand: "Converse"
+    tier: "regular"
+    models: ["オールスター", "ヴィンテージT"]
+
+  - brand: "Vans"
+    tier: "regular"
+    models: ["オールドスクール", "ヴィンテージパーカー"]
+
+  - brand: "POLO RALPH LAUREN"
+    tier: "regular"
+    models: ["ビッグポニー", "チノパン", "ラガーシャツ", "オックスフォードシャツ", "ニットセーター", "スタジアムジャンパー", "サッカーシャツ"]
+
+  - brand: "Tommy Hilfiger"
+    tier: "regular"
+    models: ["ビッグロゴパーカー", "セーリングジャケット", "フラッグT"]
+
+  - brand: "Nautica"
+    tier: "regular"
+    models: ["セーリングジャケット", "ビッグロゴスウェット"]
+
+  - brand: "Lacoste"
+    tier: "regular"
+    models: ["ポロシャツ", "トラックジャケット"]
+
+  - brand: "FILA"
+    tier: "regular"
+    models: ["トラックジャケット", "BBダウン"]
+
+  - brand: "ellesse"
+    tier: "regular"
+    models: ["トラックジャケット"]
+
+  - brand: "Umbro"
+    tier: "regular"
+    models: ["サッカーウェア", "トラックジャケット"]
+
+  - brand: "Russell Athletic"
+    tier: "regular"
+    models: ["スウェット", "カレッジパーカー"]
+
+  - brand: "GAP"
+    tier: "regular"
+    models: ["フリース", "スウェット"]
+
+  - brand: "Old Navy"
+    tier: "regular"
+    models: ["フリースジャケット"]
+
+  - brand: "Chaps"
+    tier: "regular"
+    models: ["スタジアムジャケット", "ダウンベスト"]
+
+  - brand: "Polo Sport"
+    tier: "regular"
+    models: ["フリース", "ナイロンジャケット"]
+
+  # --- vintage-specialty: Americana / 実物ミリタリー / 古着専門 ----------
+  - brand: "Buzz Rickson's"
+    tier: "vintage-specialty"
+    models: ["MA-1", "N-1デッキジャケット", "スイングトップ", "L-2Bフライトジャケット"]
+
+  - brand: "THE REAL McCOY'S"
+    tier: "vintage-specialty"
+    models: ["デニムジャケット", "フランネルシャツ"]
+
+  - brand: "TOYS McCOY"
+    tier: "vintage-specialty"
+    models: ["スカジャン", "ミリタリーシャツ"]
+
+  - brand: "Avirex"
+    tier: "vintage-specialty"
+    models: ["フライトジャケット", "スタジャン"]
+
+  - brand: "Schott"
+    tier: "vintage-specialty"
+    models: ["ライダースジャケット", "ワンスターライダース", "N-1デッキジャケット", "Pコート"]
+
+  - brand: "Lewis Leathers"
+    tier: "vintage-specialty"
+    models: ["ライダースジャケット"]
+
+  - brand: "Alpha Industries"
+    tier: "vintage-specialty"
+    models: ["MA-1", "N-3B"]
+
+  - brand: "US ARMY"
+    tier: "vintage-specialty"
+    models: ["M-65フィールドジャケット", "N-3Bパーカー", "ユーティリティシャツ", "フィッシュテールパーカー", "ジャングルファティーグ"]
+
+  - brand: "US NAVY"
+    tier: "vintage-specialty"
+    models: ["デッキジャケット", "ダンガリーシャツ", "ボンデージトラウザーズ"]
+
+  - brand: "USMC"
+    tier: "vintage-specialty"
+    models: ["HBTジャケット", "カーゴパンツ"]
+
+  - brand: "McGREGOR"
+    tier: "vintage-specialty"
+    models: ["スイングトップ", "ナイロンジャケット"]
+
+  - brand: "Sears"
+    tier: "vintage-specialty"
+    models: ["フランネルシャツ", "ワークジャケット"]
+
+  - brand: "JCPenney"
+    tier: "vintage-specialty"
+    models: ["フランネルシャツ", "デニムジャケット"]
+
+  - brand: "Montgomery Ward"
+    tier: "vintage-specialty"
+    models: ["ワークジャケット"]
+
+  - brand: "Big Mac"
+    tier: "vintage-specialty"
+    models: ["カバーオール", "デニムジャケット"]
+
+  - brand: "Big Smith"
+    tier: "vintage-specialty"
+    models: ["カバーオール", "オーバーオール"]
+
+  - brand: "Key Imperial"
+    tier: "vintage-specialty"
+    models: ["ワークシャツ", "オーバーオール"]
+
+  - brand: "Round House"
+    tier: "vintage-specialty"
+    models: ["オーバーオール"]
+
+  - brand: "Can't Bust 'Em"
+    tier: "vintage-specialty"
+    models: ["カバーオール"]
+
+  - brand: "Big Ben"
+    tier: "vintage-specialty"
+    models: ["カバーオール"]
+
+  - brand: "OshKosh B'gosh"
+    tier: "vintage-specialty"
+    models: ["オーバーオール"]
+
+  - brand: "Harley Davidson"
+    tier: "vintage-specialty"
+    models: ["レザージャケット", "プリントT", "ワッペンスタジャン", "デニムベスト"]
+
+  - brand: "Levi's Vintage Clothing"
+    tier: "vintage-specialty"
+    models: ["復刻501", "復刻505"]
+
+  - brand: "Von Dutch"
+    tier: "vintage-specialty"
+    models: ["トラッカーキャップ", "プリントT"]
+
+  - brand: "Ed Hardy"
+    tier: "vintage-specialty"
+    models: ["プリントT", "スタジャン"]
+
+  - brand: "JNCO"
+    tier: "vintage-specialty"
+    models: ["バギーデニム"]
+
+  - brand: "Cross Colours"
+    tier: "vintage-specialty"
+    models: ["カラーブロックT"]
+
+  - brand: "Karl Kani"
+    tier: "vintage-specialty"
+    models: ["バギーパンツ", "ロゴT"]
+
+  - brand: "FUBU"
+    tier: "vintage-specialty"
+    models: ["ロゴジャケット"]
+
+  - brand: "Girbaud"
+    tier: "vintage-specialty"
+    models: ["バギーデニム"]
+
+  - brand: "ECKO UNLTD"
+    tier: "vintage-specialty"
+    models: ["ロゴパーカー"]
+
+  - brand: "GUESS"
+    tier: "vintage-specialty"
+    models: ["デニムジャケット", "ジョージマルシアーノ期デニム"]
+
+  - brand: "Structure"
+    tier: "vintage-specialty"
+    models: ["チェックシャツ"]
+
+  - brand: "American Eagle Outfitters"
+    tier: "vintage-specialty"
+    models: ["フランネルシャツ"]
+
+  - brand: "Duck Head"
+    tier: "vintage-specialty"
+    models: ["チノパン"]
+
+  - brand: "Le Tigre"
+    tier: "vintage-specialty"
+    models: ["ポロシャツ"]
+
+  - brand: "Munsingwear"
+    tier: "vintage-specialty"
+    models: ["ペンギンマークポロ"]
+
+  - brand: "Grand Slam"
+    tier: "vintage-specialty"
+    models: ["ポロシャツ"]
+
+  - brand: "London Fog"
+    tier: "vintage-specialty"
+    models: ["ステンカラーコート"]
+
+  - brand: "Members Only"
+    tier: "vintage-specialty"
+    models: ["レーサージャケット"]
+
+  # --- streetwear: ストリート/Y2K -----------------------------------------
+  - brand: "Supreme"
+    tier: "streetwear"
+    models: ["BOXロゴパーカー", "BOXロゴT", "キャンプキャップ", "ワークシャツ", "デニムジャケット"]
+
+  - brand: "A BATHING APE"
+    tier: "streetwear"
+    models: ["カモパーカー", "シャークパーカー", "エイプヘッドT", "カモパンツ"]
+
+  - brand: "Stussy"
+    tier: "streetwear"
+    models: ["8ボールT", "ワールドツアーT", "ストックロゴパーカー", "デザートストームT", "サーフマンT"]
+
+  - brand: "X-girl"
+    tier: "streetwear"
+    models: ["ロゴT", "ミニロゴパーカー"]
+
+  - brand: "Undercover"
+    tier: "streetwear"
+    models: ["ロゴT"]
+
+  - brand: "Hysteric Glamour"
+    tier: "streetwear"
+    models: ["ロゴT", "プリントパーカー"]
+
+  - brand: "Number (N)ine"
+    tier: "streetwear"
+    models: ["ロゴT"]
+
+  - brand: "Neighborhood"
+    tier: "streetwear"
+    models: ["スタジャン", "ロゴT"]
+
+  - brand: "WTAPS"
+    tier: "streetwear"
+    models: ["カーゴパンツ", "ミリタリーシャツ"]
+
+  - brand: "Bounty Hunter"
+    tier: "streetwear"
+    models: ["ロゴT"]
+
+  - brand: "GOODENOUGH"
+    tier: "streetwear"
+    models: ["ロゴT"]
+
+  - brand: "F.C.Real Bristol"
+    tier: "streetwear"
+    models: ["プラクティスシャツ"]
+
+  - brand: "X-LARGE"
+    tier: "streetwear"
+    models: ["ロゴT", "OGロゴパーカー"]
+
+  - brand: "COOKMAN"
+    tier: "streetwear"
+    models: ["シェフパンツ"]
+
+  - brand: "Kapital"
+    tier: "streetwear"
+    models: ["リンガーT", "ボロデニム"]
+
+  - brand: "visvim"
+    tier: "streetwear"
+    models: ["FBTモカシン", "ロゴT"]
+
+  # --- outdoor: アウトドア/機能系 ------------------------------------------
+  - brand: "Marmot"
+    tier: "outdoor"
+    models: ["ダウンジャケット", "フリース"]
+
+  - brand: "Mountain Hardwear"
+    tier: "outdoor"
+    models: ["ダウンジャケット"]
+
+  - brand: "Arc'teryx"
+    tier: "outdoor"
+    models: ["ゴアテックスジャケット"]
+
+  - brand: "Helly Hansen"
+    tier: "outdoor"
+    models: ["マリンジャケット"]
+
+  - brand: "Burton"
+    tier: "outdoor"
+    models: ["スノーボードジャケット"]
+
+  - brand: "K2"
+    tier: "outdoor"
+    models: ["スキーウェア"]
+
+  - brand: "Mammut"
+    tier: "outdoor"
+    models: ["マウンテンパーカー"]
+
+  - brand: "Sierra Designs"
+    tier: "outdoor"
+    models: ["マウンテンパーカー"]
+
+  - brand: "Gramicci"
+    tier: "outdoor"
+    models: ["クライミングパンツ"]
+
+  - brand: "Fjallraven"
+    tier: "outdoor"
+    models: ["ケンケンジャケット"]
+
+  - brand: "Napapijri"
+    tier: "outdoor"
+    models: ["スキーウェア"]
+
+  - brand: "Mountain Equipment"
+    tier: "outdoor"
+    models: ["ダウンジャケット"]
+
+  # --- denim-japan: 日本製レプリカ/リジッドデニム -------------------------
+  - brand: "Big John"
+    tier: "denim-japan"
+    models: ["リジッドデニム", "M1002"]
+
+  - brand: "EDWIN"
+    tier: "denim-japan"
+    models: ["503", "デニムジャケット"]
+
+  - brand: "Bobson"
+    tier: "denim-japan"
+    models: ["リジッドデニム"]
+
+  - brand: "Studio D'Artisan"
+    tier: "denim-japan"
+    models: ["リジッドデニム"]
+
+  - brand: "Full Count"
+    tier: "denim-japan"
+    models: ["1108", "デニムジャケット"]
+
+  - brand: "Denime"
+    tier: "denim-japan"
+    models: ["リジッドデニム"]
+
+  - brand: "EVISU"
+    tier: "denim-japan"
+    models: ["カモメマークデニム"]
+
+  - brand: "Flat Head"
+    tier: "denim-japan"
+    models: ["リジッドデニム"]
+
+  - brand: "Warehouse"
+    tier: "denim-japan"
+    models: ["デニムジャケット", "スウェット"]
+
+  - brand: "Samurai Jeans"
+    tier: "denim-japan"
+    models: ["リジッドデニム"]
+
+  - brand: "Iron Heart"
+    tier: "denim-japan"
+    models: ["リジッドデニム", "フランネルシャツ"]
+
+  - brand: "Momotaro Jeans"
+    tier: "denim-japan"
+    models: ["リジッドデニム"]
+
+  # --- sports-license: NFL/NBA/MLB/NCAA等 ---------------------------------
+  - brand: "Starter"
+    tier: "sports-license"
+    models: ["NFLジャケット", "NBAスタジャン", "サテンジャケット"]
+
+  - brand: "Pro Player"
+    tier: "sports-license"
+    models: ["NFLスウェット", "MLBスウェット"]
+
+  - brand: "Logo Athletic"
+    tier: "sports-license"
+    models: ["NBAジャージ"]
+
+  - brand: "Mitchell & Ness"
+    tier: "sports-license"
+    models: ["スロウバックジャージ"]
+
+  - brand: "Nutmeg Mills"
+    tier: "sports-license"
+    models: ["NFLスウェット"]
+
+  - brand: "Salem Sportswear"
+    tier: "sports-license"
+    models: ["NFLスウェット"]
+
+  - brand: "Sports Specialties"
+    tier: "sports-license"
+    models: ["NFLキャップ"]
+
+  - brand: "Apex One"
+    tier: "sports-license"
+    models: ["カレッジジャケット"]
+
+  - brand: "Chalk Line"
+    tier: "sports-license"
+    models: ["NFLジャケット"]
+
+  - brand: "Rawlings"
+    tier: "sports-license"
+    models: ["MLBジャケット"]
+
+  - brand: "Wilson"
+    tier: "sports-license"
+    models: ["スポーツウェア"]
+
+  - brand: "Spalding"
+    tier: "sports-license"
+    models: ["カレッジパーカー"]
+
+  - brand: "Jerzees"
+    tier: "sports-license"
+    models: ["カレッジスウェット"]
+
+  - brand: "Hanes"
+    tier: "sports-license"
+    models: ["ビーフィーT", "カレッジT"]
+
+  - brand: "Fruit of the Loom"
+    tier: "sports-license"
+    models: ["カレッジT"]
+
+  - brand: "Gildan"
+    tier: "sports-license"
+    models: ["無地T"]
+
+  - brand: "Majestic"
+    tier: "sports-license"
+    models: ["MLBジャージ"]
+
+  - brand: "New Era"
+    tier: "sports-license"
+    models: ["MLBキャップ"]
+
+  - brand: "Twins Enterprise"
+    tier: "sports-license"
+    models: ["MLBキャップ"]
+
+  - brand: "Locker Room"
+    tier: "sports-license"
+    models: ["NFLジャケット"]
+
+  - brand: "Pro Line"
+    tier: "sports-license"
+    models: ["NFLTシャツ"]
+
+  - brand: "Cross Creek"
+    tier: "sports-license"
+    models: ["カレッジスウェット"]
+
+  - brand: "Artex"
+    tier: "sports-license"
+    models: ["カレッジスウェット"]
+
+  - brand: "Velva Sheen"
+    tier: "sports-license"
+    models: ["カレッジT", "無地T"]
+
+  - brand: "Camber"
+    tier: "sports-license"
+    models: ["スウェット"]
+
+  # --- workwear: ワークウェア/ブーツ ---------------------------------------
+  - brand: "Sweet-Orr"
+    tier: "vintage-specialty"
+    models: ["ワークジャケット"]
+
+  - brand: "Universal Overall"
+    tier: "vintage-specialty"
+    models: ["カバーオール"]
+
+  - brand: "Berne"
+    tier: "vintage-specialty"
+    models: ["カバーオール"]
+
+  - brand: "Walls"
+    tier: "vintage-specialty"
+    models: ["ワークジャケット"]
+
+  - brand: "Wolverine"
+    tier: "vintage-specialty"
+    models: ["ワークブーツ"]
+
+  - brand: "Red Wing"
+    tier: "vintage-specialty"
+    models: ["ワークブーツ", "アイリッシュセッター"]
+
+  - brand: "Danner"
+    tier: "vintage-specialty"
+    models: ["マウンテンブーツ"]
+
+  - brand: "Chippewa"
+    tier: "vintage-specialty"
+    models: ["エンジニアブーツ"]
+
+  # --- licensed-print: キャラクター/企業ロゴプリントT ----------------------
+  - brand: "Disney"
+    tier: "licensed-print"
+    models: ["ヴィンテージT", "ミッキープリントT"]
+
+  - brand: "Warner Bros"
+    tier: "licensed-print"
+    models: ["ルーニーテューンズT"]
+
+  - brand: "NASA"
+    tier: "licensed-print"
+    models: ["ロゴT"]
+
+  - brand: "Coca-Cola"
+    tier: "licensed-print"
+    models: ["ロゴT"]
+
+  - brand: "Marlboro"
+    tier: "licensed-print"
+    models: ["ロゴT"]
+
+  - brand: "Budweiser"
+    tier: "licensed-print"
+    models: ["ロゴT"]
+
+  # --- streetwear 追加: 国内外デザイナー/ストリート -------------------------
+  - brand: "Chrome Hearts"
+    tier: "streetwear"
+    models: ["ロングTシャツ", "デニム"]
+
+  - brand: "SASQUATCHfabrix"
+    tier: "streetwear"
+    models: ["ミリタリーシャツ"]
+
+  - brand: "Mihara Yasuhiro"
+    tier: "streetwear"
+    models: ["スニーカー"]
+
+  - brand: "COMME des GARCONS"
+    tier: "streetwear"
+    models: ["プレイロゴT"]
+
+  - brand: "Junya Watanabe"
+    tier: "streetwear"
+    models: ["デニム"]
+
+  - brand: "sacai"
+    tier: "streetwear"
+    models: ["ハイブリッドジャケット"]
+
+  - brand: "Human Made"
+    tier: "streetwear"
+    models: ["ハートロゴT"]
+
+  - brand: "Girls Don't Cry"
+    tier: "streetwear"
+    models: ["ロゴT"]
+
+  - brand: "Fear of God"
+    tier: "streetwear"
+    models: ["エッセンシャルズフーディー"]
+
+  - brand: "Palace Skateboards"
+    tier: "streetwear"
+    models: ["トライファーグT"]
+
+  - brand: "Thrasher"
+    tier: "streetwear"
+    models: ["ロゴT"]
+
+  - brand: "Anti Social Social Club"
+    tier: "streetwear"
+    models: ["ロゴT"]
+
+  # --- outdoor 追加 ---------------------------------------------------------
+  - brand: "Snow Peak"
+    tier: "outdoor"
+    models: ["フリース"]
+
+  - brand: "mont-bell"
+    tier: "outdoor"
+    models: ["マウンテンパーカー"]
+
+  - brand: "Norrona"
+    tier: "outdoor"
+    models: ["マウンテンジャケット"]
+
+  - brand: "Descente"
+    tier: "outdoor"
+    models: ["スキーウェア"]
+
+  - brand: "Phenix"
+    tier: "outdoor"
+    models: ["スキーウェア"]
+
+  # --- denim-japan 追加 -------------------------------------------------
+  - brand: "Pure Blue Japan"
+    tier: "denim-japan"
+    models: ["リジッドデニム"]
+
+  - brand: "Oni Denim"
+    tier: "denim-japan"
+    models: ["リジッドデニム"]
+
+  - brand: "Sugar Cane"
+    tier: "denim-japan"
+    models: ["リジッドデニム", "スーベニアジャケット"]
+
+  - brand: "TCB jeans"
+    tier: "denim-japan"
+    models: ["リジッドデニム"]
+
+  - brand: "Resolute"
+    tier: "denim-japan"
+    models: ["リジッドデニム"]
+
+  - brand: "Doubleworker"
+    tier: "denim-japan"
+    models: ["リジッドデニム"]
+
+  - brand: "Japan Blue Jeans"
+    tier: "denim-japan"
+    models: ["リジッドデニム"]
+
+  - brand: "45rpm"
+    tier: "denim-japan"
+    models: ["リジッドデニム"]
+
+  - brand: "Blue Blue Japan"
+    tier: "denim-japan"
+    models: ["インディゴT"]
+
+  # --- regular 追加: サーフ/スケート/ゴルフ/セーター --------------------
+  - brand: "Izod"
+    tier: "regular"
+    models: ["ポロシャツ"]
+
+  - brand: "Van Heusen"
+    tier: "regular"
+    models: ["ワークシャツ"]
+
+  - brand: "Arrow"
+    tier: "regular"
+    models: ["ワークシャツ"]
+
+  - brand: "Towncraft"
+    tier: "regular"
+    models: ["ワークシャツ"]
+
+  - brand: "Jantzen"
+    tier: "regular"
+    models: ["ニットセーター"]
+
+  - brand: "Puritan"
+    tier: "regular"
+    models: ["ニットセーター"]
+
+  - brand: "Cutter & Buck"
+    tier: "regular"
+    models: ["ゴルフポロ"]
+
+  - brand: "Hang Ten"
+    tier: "regular"
+    models: ["サーフT"]
+
+  - brand: "Ocean Pacific"
+    tier: "regular"
+    models: ["サーフT"]
+
+  - brand: "Quiksilver"
+    tier: "regular"
+    models: ["サーフT"]
+
+  - brand: "Rip Curl"
+    tier: "regular"
+    models: ["サーフT"]
+
+  - brand: "Billabong"
+    tier: "regular"
+    models: ["サーフT"]
+
+  - brand: "Vision Street Wear"
+    tier: "regular"
+    models: ["スケートT"]
+
+  - brand: "Powell Peralta"
+    tier: "regular"
+    models: ["スケートT"]
+
+  - brand: "Santa Cruz"
+    tier: "regular"
+    models: ["スケートT"]
+
+  - brand: "Independent Truck"
+    tier: "regular"
+    models: ["スケートT"]
+
+  - brand: "Airwalk"
+    tier: "regular"
+    models: ["スケートシューズ"]
+
+  - brand: "Body Glove"
+    tier: "regular"
+    models: ["ウェットスーツ", "ラッシュガード"]
+
+  - brand: "Local Motion"
+    tier: "regular"
+    models: ["サーフT"]
+
+  # --- vintage-specialty 追加: ワークウェア/ウエスタン --------------------
+  - brand: "Bill's Khakis"
+    tier: "vintage-specialty"
+    models: ["チノパン"]
+
+  - brand: "Duxbak"
+    tier: "vintage-specialty"
+    models: ["ハンティングジャケット"]
+
+  - brand: "Camp 7"
+    tier: "vintage-specialty"
+    models: ["ダウンベスト"]
+
+  - brand: "Big Yank"
+    tier: "vintage-specialty"
+    models: ["ワークシャツ"]
+
+  - brand: "Boss of the Road"
+    tier: "vintage-specialty"
+    models: ["オーバーオール"]
+
+  - brand: "Blue Bell"
+    tier: "vintage-specialty"
+    models: ["ワークシャツ"]
+
+  - brand: "Pointer Brand"
+    tier: "vintage-specialty"
+    models: ["カバーオール"]
+
+  - brand: "Sheplers"
+    tier: "vintage-specialty"
+    models: ["ウエスタンシャツ"]
+
+  - brand: "H Bar C"
+    tier: "vintage-specialty"
+    models: ["ウエスタンシャツ"]
+
+  - brand: "Rockmount"
+    tier: "vintage-specialty"
+    models: ["ウエスタンシャツ"]
+
+  - brand: "Karman"
+    tier: "vintage-specialty"
+    models: ["ダウンベスト"]
+
+  # --- streetwear 追加: US/UKストリート ------------------------------------
+  - brand: "Billionaire Boys Club"
+    tier: "streetwear"
+    models: ["ロゴT"]
+
+  - brand: "Ice Cream"
+    tier: "streetwear"
+    models: ["ロゴT"]
+
+  - brand: "The Hundreds"
+    tier: "streetwear"
+    models: ["ロゴT"]
+
+  - brand: "Diamond Supply Co"
+    tier: "streetwear"
+    models: ["ロゴT"]
+
+  - brand: "HUF"
+    tier: "streetwear"
+    models: ["ロゴT"]
+
+  - brand: "Obey"
+    tier: "streetwear"
+    models: ["ロゴT"]
+
+  - brand: "Rocawear"
+    tier: "streetwear"
+    models: ["ロゴT"]
+
+  - brand: "Sean John"
+    tier: "streetwear"
+    models: ["ロゴT"]
+
+  - brand: "Phat Farm"
+    tier: "streetwear"
+    models: ["ロゴT"]
+
+  - brand: "Enyce"
+    tier: "streetwear"
+    models: ["ロゴT"]
+
+  - brand: "South Pole"
+    tier: "streetwear"
+    models: ["ロゴT"]
+
+  - brand: "Akademiks"
+    tier: "streetwear"
+    models: ["ロゴT"]
+
+  - brand: "Mecca"
+    tier: "streetwear"
+    models: ["ロゴT"]
+
+  - brand: "Coogi"
+    tier: "streetwear"
+    models: ["ニットセーター"]
+
+  # --- outdoor 追加 -----------------------------------------------------
+  - brand: "Sherpa Adventure Gear"
+    tier: "outdoor"
+    models: ["フリース"]
+
+  - brand: "Kelty"
+    tier: "outdoor"
+    models: ["マウンテンパーカー"]
+
+  - brand: "JanSport"
+    tier: "outdoor"
+    models: ["バックパック"]
+
+  - brand: "Karrimor"
+    tier: "outdoor"
+    models: ["マウンテンパーカー"]
+
+  - brand: "Kavu"
+    tier: "outdoor"
+    models: ["バケットハット"]
+
+  # --- sports-license 追加 ------------------------------------------------
+  - brand: "Logo 7"
+    tier: "sports-license"
+    models: ["NFLジャケット"]
+
+  - brand: "Competitor"
+    tier: "sports-license"
+    models: ["NFLTシャツ"]
+
+  - brand: "Trench"
+    tier: "sports-license"
+    models: ["NFLジャケット"]
+
+  - brand: "Swingster"
+    tier: "sports-license"
+    models: ["NFLジャケット"]

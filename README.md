@@ -27,10 +27,23 @@
    - `keywords` に加えて `watch_brands` の各ブランド名×「古着」も自動で検索対象に
      追加され（`collect.py`の`_build_search_keywords`）、レギュラー古着・ビンテージ
      古着を問わず網羅的に収集する
+   - **`config/brand_catalog.yaml`**: 定番ブランド×代表モデル/型番を約400組（Champion
+     リバースウィーブ、Levi's 501、Patagonia シンチラ 等）収録したカタログ。ここからも
+     「ブランド名 モデル名」の検索キーワードを自動生成し、ブランド単位に留まらない
+     型番/モデルレベルのトレンド分析ができるだけのデータボリュームを取りに行く
+     （キーワード数が数百規模になるため、`sources.yahoo_auction`/`sources.mercari`は
+     1キーワードあたりの深さを絞って幅で稼ぐ設定にしてある）
    - `data/manual/`: 手動でCSVを置くとスクレイパーの失敗時も自動フォールバック
 2. **正規化・集計**（`src/pipeline/normalize.py`, `collect.py`）
    - 全ソースを共通スキーマ（`MarketItem`）に統合し、重複除去
-   - ブランド別の売れ行き・平均価格などをサーバー側で確定計算（LLMに数字を捏造させない）
+   - ブランド別・型番/モデル別の売れ行き・平均価格などをサーバー側で確定計算
+     （LLMに数字を捏造させない）
+   - **トレンド集計とベンチマークの分離**（`report_generator._quick_stats`）: ヤフオク・
+     メルカリ・手動データ（直近の落札/売却を検索した結果＝比較的直近の実売）は`trend`、
+     独立系ヴィンテージショップEC等（「現在在庫切れ」であることしか分からず、いつ売れたか
+     不明）は`reference_benchmark`として完全に別集計にしている。特定の高単価専門店1店舗
+     のデータが全体トレンドの平均・ブランドランキングを歪めることを防ぎ、あくまで参考情報
+     として別立てで扱う設計
 3. **レポート生成**（`src/pipeline/report_generator.py`）
    - `src/prompts/system_prompt.md`（4フェーズのシステムプロンプト）とデータをClaudeに渡し、
      `data/reports/YYYY-MM-DD_vintage-resale-report.md` を生成
@@ -88,6 +101,10 @@ python -m src.main report --input data/raw/collected_XXXXXXXXTXXXXXXZ.jsonl
 - `sources.*.enabled`: 各スクレイパーのON/OFF
 - `sources.base_ec.shop_urls`: 監視したいBASEショップの公開URL
 - `report.model`: 使用するClaudeモデル（既定 `claude-sonnet-5`）
+
+`config/brand_catalog.yaml`（ブランド×モデルの網羅カタログ、約400組）はブランドや
+モデルの追加・削除だけで完結する頻度の低い編集向けの別ファイルとして分離してある。
+`catalog: [{brand: "...", tier: "...", models: ["...", ...]}, ...]` の形式で追記すればよい。
 
 ## 手動データの投入（フォールバック運用）
 

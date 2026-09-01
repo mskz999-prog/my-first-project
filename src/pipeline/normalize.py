@@ -20,6 +20,7 @@ class MarketItem:
     price: Optional[int] = None       # sold / listed price in JPY
     is_sold: bool = True
     brand: Optional[str] = None
+    model: Optional[str] = None       # representative model/型番 from config/brand_catalog.yaml
     category: Optional[str] = None
     size: Optional[str] = None
     condition: Optional[str] = None
@@ -73,8 +74,8 @@ def load_manual_csv(path: Path, source: str = "manual") -> list[MarketItem]:
     """Load a manually-exported CSV as a fallback / supplement data source.
 
     Expected columns (extra columns are ignored, missing ones default to
-    None/empty): title, price, is_sold, brand, category, size, condition,
-    tags (comma-separated), listed_at, sold_at, url, shop_name.
+    None/empty): title, price, is_sold, brand, model, category, size,
+    condition, tags (comma-separated), listed_at, sold_at, url, shop_name.
     """
     if not path.exists():
         return []
@@ -91,6 +92,7 @@ def load_manual_csv(path: Path, source: str = "manual") -> list[MarketItem]:
                     price=int(price_raw) if price_raw.isdigit() else None,
                     is_sold=str(row.get("is_sold", "true")).lower() not in ("false", "0", ""),
                     brand=(row.get("brand") or "").strip() or None,
+                    model=(row.get("model") or "").strip() or None,
                     category=(row.get("category") or "").strip() or None,
                     size=(row.get("size") or "").strip() or None,
                     condition=(row.get("condition") or "").strip() or None,

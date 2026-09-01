@@ -14,6 +14,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from src.pipeline.catalog import build_model_index, catalog_brand_names, catalog_keywords, load_brand_catalog
 from src.pipeline.normalize import MarketItem, dedupe, load_manual_csv, save_jsonl
 from src.scrapers import base_ec, mercari, vintage_shops, yahoo_auction
 from src.scrapers.base_scraper import ScraperError
@@ -21,18 +22,26 @@ from src.scrapers.base_scraper import ScraperError
 logger = logging.getLogger(__name__)
 
 
-def _build_search_keywords(config: dict[str, Any]) -> list[str]:
-    """Base keywords + one "<brand> 古着" combo per watched brand.
+def _build_search_keywords(
+    config: dict[str, Any], catalog: list[dict[str, Any]] | None = None
+) -> list[str]:
+    """Base keywords + one "<brand> 古着" combo per watched brand, plus one
+    "<brand> <model>" combo per config/brand_catalog.yaml entry.
 
     The base keyword list alone (e.g. plain "古着", "ヴィンテージ") tends to
-    surface whatever is most generically popular; adding a per-brand combo
-    ensures every brand in watch_brands gets its own dedicated search, so
-    both mainstream and vintage-specific items across all tracked brands
-    are covered rather than just whatever ranks highest for broad terms.
+    surface whatever is most generically popular; the per-brand combo
+    ensures every brand in watch_brands gets its own dedicated search. The
+    catalog combos go a level deeper — a specific model/型番 per search —
+    which is what makes item-level (not just brand-level) trend analysis
+    possible: a generic "Champion 古着" search gets buried in irrelevant
+    results, but "Champion リバースウィーブ" surfaces exactly that model.
     """
     keywords = list(dict.fromkeys(config.get("keywords", [])))  # de-dupe, keep order
     for brand in config.get("watch_brands", []):
         combo = f"{brand} 古着"
+        if combo not in keywords:
+            keywords.append(combo)
+    for combo in catalog_keywords(catalog or []):
         if combo not in keywords:
             keywords.append(combo)
     return keywords
@@ -90,6 +99,11 @@ def _fill_missing_brands(items: list[MarketItem], watch_brands: list[str]) -> No
     fills `brand` in place wherever a watched brand's name (case-insensitive)
     appears in the title and no brand was already set (e.g. from a manual
     CSV, which is trusted as-is and left untouched).
+
+    `watch_brands` is expected to already include the brand_catalog.yaml
+    brand names (see collect_all) so this also tags items against the much
+    larger catalog, not just the handful of headline watch_brands in
+    config.yaml.
     """
     if not watch_brands:
         return
@@ -104,11 +118,42 @@ def _fill_missing_brands(items: list[MarketItem], watch_brands: list[str]) -> No
                 break
 
 
+def _fill_missing_model(items: list[MarketItem], model_index: dict[str, list[str]]) -> None:
+    """Best-effort model/型番 tagging: only attempted for items that already
+    have a brand (from _fill_missing_brands or a manual CSV) matching a
+    brand_catalog.yaml entry, and only matches that brand's own model list
+    — a bare "501" or "MA-1" is too ambiguous to match brand-agnostically,
+    but is unambiguous once we know the item is already tagged as Levi's
+    or Alpha Industries. This is what enables item/model-level trend
+    breakdowns (see report_generator._quick_stats' top_models), not just
+    brand-level ones.
+    """
+    if not model_index:
+        return
+    for item in items:
+        if item.model or not item.brand:
+            continue
+        models = model_index.get(item.brand)
+        if not models:
+            continue
+        title_lower = item.title.lower()
+        for model in models:
+            if model.lower() in title_lower:
+                item.model = model
+                break
+
+
 def collect_all(config: dict[str, Any], project_root: Path) -> tuple[list[MarketItem], Path]:
     """Collect from every enabled source and return (items, saved_jsonl_path)."""
     items: list[MarketItem] = []
     sources_cfg = config.get("sources", {})
-    search_keywords = _build_search_keywords(config)
+    catalog = load_brand_catalog()
+    search_keywords = _build_search_keywords(config, catalog)
+    logger.info(
+        "collect_all: %d total search keywords (%d brand_catalog.yaml entries)",
+        len(search_keywords),
+        len(catalog),
+    )
 
     yahoo_cfg = sources_cfg.get("yahoo_auction", {})
     if yahoo_cfg.get("enabled") and search_keywords:
@@ -177,15 +222,20 @@ def collect_all(config: dict[str, Any], project_root: Path) -> tuple[list[Market
     logger.info("manual: loaded %d items from %s", manual_count, manual_dir)
 
     deduped = dedupe(items)
-    _fill_missing_brands(deduped, config.get("watch_brands", []))
+    watch_brands = list(dict.fromkeys(config.get("watch_brands", []) + catalog_brand_names(catalog)))
+    _fill_missing_brands(deduped, watch_brands)
+    _fill_missing_model(deduped, build_model_index(catalog))
     _fill_missing_category(deduped)
     brand_tagged = sum(1 for i in deduped if i.brand)
+    model_tagged = sum(1 for i in deduped if i.model)
     category_tagged = sum(1 for i in deduped if i.category)
     logger.info(
-        "collect_all: %d raw -> %d after dedupe (%d have a brand tag, %d have a category tag)",
+        "collect_all: %d raw -> %d after dedupe (%d have a brand tag, %d have a model tag, "
+        "%d have a category tag)",
         len(items),
         len(deduped),
         brand_tagged,
+        model_tagged,
         category_tagged,
     )
 

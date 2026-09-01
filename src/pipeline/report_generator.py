@@ -21,6 +21,16 @@ logger = logging.getLogger(__name__)
 
 PROMPT_PATH = Path(__file__).resolve().parent.parent / "prompts" / "system_prompt.md"
 
+# Sources with a genuine recency signal — the scrape targets "recently sold/
+# closed" listings, so their prices reflect current market activity. Sources
+# outside this set (currently just vintage_shop, e.g. acorn) only tell us
+# "currently out of stock", with no way to know if that sale was last week
+# or three years ago, and vintage_shop happens in practice to be dominated
+# by one high-end specialty store — so its prices are excluded from the main
+# trend aggregates entirely and surfaced separately as a labeled reference
+# benchmark instead. See build_user_message's explanatory text.
+TREND_SOURCES = {"yahoo_auction", "mercari", "manual"}
+
 
 def _load_system_prompt() -> str:
     return PROMPT_PATH.read_text(encoding="utf-8")
@@ -46,20 +56,15 @@ def _price_block(prices: list[int]) -> dict[str, Any]:
     }
 
 
-def _quick_stats(items: list[MarketItem]) -> dict[str, Any]:
-    """Compute a small set of aggregate stats server-side (not by the LLM)
-    so the report's headline numbers are exact, not model-estimated.
-
-    Includes min/max alongside avg/median specifically so an implausible
-    outlier (e.g. a mis-extracted price) is visible in the numbers handed
-    to the model, instead of only surfacing once buried in an average.
+def _brand_category_model_breakdown(sold: list[MarketItem]) -> dict[str, Any]:
+    """Shared aggregation logic for a set of already-filtered sold items —
+    used once for trend_stats (recency-bearing sources only) and once for
+    reference_benchmark (everything else), so the two never mix.
     """
-    sold = [i for i in items if i.is_sold and i.price]
-    prices = [i.price for i in sold if i.price]
-
     brand_prices: dict[str, list[int]] = defaultdict(list)
     category_prices: dict[str, list[int]] = defaultdict(list)
     brand_category_prices: dict[tuple[str, str], list[int]] = defaultdict(list)
+    brand_model_prices: dict[tuple[str, str], list[int]] = defaultdict(list)
     for i in sold:
         if not i.price:
             continue
@@ -69,6 +74,8 @@ def _quick_stats(items: list[MarketItem]) -> dict[str, Any]:
             category_prices[i.category].append(i.price)
         if i.brand and i.category:
             brand_category_prices[(i.brand, i.category)].append(i.price)
+        if i.brand and i.model:
+            brand_model_prices[(i.brand, i.model)].append(i.price)
 
     top_brands = [
         {"brand": brand, **_price_block(prices_)}
@@ -84,19 +91,59 @@ def _quick_stats(items: list[MarketItem]) -> dict[str, Any]:
             brand_category_prices.items(), key=lambda kv: -len(kv[1])
         )[:30]
     ]
+    top_models = [
+        {"brand": brand, "model": model, **_price_block(prices_)}
+        for (brand, model), prices_ in sorted(
+            brand_model_prices.items(), key=lambda kv: -len(kv[1])
+        )[:40]
+    ]
+
+    return {
+        "overall": _price_block([i.price for i in sold if i.price]),
+        "top_brands": top_brands,
+        "top_categories": top_categories,
+        "brand_category_breakdown": brand_category_breakdown,
+        "top_models": top_models,
+    }
+
+
+def _quick_stats(items: list[MarketItem]) -> dict[str, Any]:
+    """Compute a small set of aggregate stats server-side (not by the LLM)
+    so the report's headline numbers are exact, not model-estimated.
+
+    Includes min/max alongside avg/median specifically so an implausible
+    outlier (e.g. a mis-extracted price) is visible in the numbers handed
+    to the model, instead of only surfacing once buried in an average.
+
+    Deliberately computed as two disjoint aggregates rather than one blended
+    set of numbers: `trend` (yahoo_auction/mercari/manual — sources with a
+    real recency signal) drives the headline market-trend analysis, while
+    `reference_benchmark` (vintage_shop etc.) is kept out of every trend
+    number entirely and reported separately. Earlier versions blended
+    everything into one `overall_*`/`top_brands` set, which let one
+    high-end specialty vintage_shop (acorn) — with no way to know if a
+    listing sold last week or three years ago — dominate brand/category
+    averages meant to represent "this week's market".
+    """
+    trend_items = [i for i in items if i.source in TREND_SOURCES]
+    reference_items = [i for i in items if i.source not in TREND_SOURCES]
+
+    trend_sold = [i for i in trend_items if i.is_sold and i.price]
+    reference_sold = [i for i in reference_items if i.is_sold and i.price]
+
+    trend = _brand_category_model_breakdown(trend_sold)
+    reference_benchmark = _brand_category_model_breakdown(reference_sold)
 
     by_source = Counter(i.source for i in items)
-    overall = _price_block(prices)
-
     source_prices: dict[str, list[int]] = defaultdict(list)
-    for i in sold:
-        if i.price:
+    for i in items:
+        if i.is_sold and i.price:
             source_prices[i.source].append(i.price)
     by_source_stats = [
         {
             "source": source,
             "item_count": by_source.get(source, 0),
-            "has_recency_signal": source in ("yahoo_auction", "mercari"),
+            "has_recency_signal": source in TREND_SOURCES,
             **_price_block(prices_),
         }
         for source, prices_ in source_prices.items()
@@ -104,16 +151,30 @@ def _quick_stats(items: list[MarketItem]) -> dict[str, Any]:
 
     return {
         "total_items": len(items),
-        "total_sold_with_price": len(sold),
-        "overall_avg_price": overall["avg_price"],
-        "overall_median_price": overall["median_price"],
-        "overall_min_price": overall["min_price"],
-        "overall_max_price": overall["max_price"],
+        "total_sold_with_price": len(trend_sold) + len(reference_sold),
         "items_by_source": dict(by_source),
         "by_source_price_stats": by_source_stats,
-        "top_brands": top_brands,
-        "top_categories": top_categories,
-        "brand_category_breakdown": brand_category_breakdown,
+        "trend": {
+            "description": (
+                "直近性のあるソース（ヤフオク・メルカリ・手動データ）のみで算出。"
+                "全体トレンド分析・見出しの数字はこちらを使うこと。"
+            ),
+            "sources": sorted(TREND_SOURCES),
+            "total_items": len(trend_items),
+            "total_sold_with_price": len(trend_sold),
+            **trend,
+        },
+        "reference_benchmark": {
+            "description": (
+                "時期不明の完売実績（例: 独立系ヴィンテージショップECの在庫切れ商品）。"
+                "いつ売れたか分からないため全体トレンドの集計には含めていない。"
+                "参考情報としてのみ扱い、平均・中央値等をtrendの数字と混ぜて語らないこと。"
+            ),
+            "sources": sorted(s for s in by_source if s not in TREND_SOURCES),
+            "total_items": len(reference_items),
+            "total_sold_with_price": len(reference_sold),
+            **reference_benchmark,
+        },
     }
 
 
@@ -130,15 +191,20 @@ def build_user_message(
         f"# 入力データ（直近{lookback_days}日分・自動収集＋手動データ統合）",
         "",
         "## サーバー側で事前集計した確定値（この数値はそのまま正として使用してよい）",
-        "重要: `by_source_price_stats`の`has_recency_signal`に注意すること。"
-        "`yahoo_auction`と`mercari`は「直近の落札/売却」を検索した結果なので比較的直近の"
-        "取引を反映しているが、`vintage_shop`（独立系ショップEC）は現在の公開APIの制約上"
-        "「現在在庫切れ」であることしか分からず、**いつ売れたかは一切不明**（数ヶ月〜数年前の"
-        "可能性もある）。`vintage_shop`のデータを「今週の成約」「今週売れた」のように断定的に"
-        "書かないこと。「◯◯（店名）の完売実績（時期不明・ベンチマーク参考値）」のように、"
-        "時期不明であることを明示した上で扱うこと。また特定の1店舗が母数の大半を占める場合は、"
-        "その店舗固有の傾向（高単価帯に強い店等）である可能性を明記し、市場全体の傾向として"
-        "一般化しすぎないこと。",
+        "重要: 数値は`trend`と`reference_benchmark`の2系統に完全に分離済み。"
+        "`trend`はヤフオク・メルカリ・手動データ（直近の落札/売却を検索した結果＝比較的直近の"
+        "取引を反映）のみで算出した数字で、**全体トレンド分析・見出しの平均/中央値/ブランド"
+        "ランキング/アイテム（型番）ランキングはすべてこちらを主として使うこと**。"
+        "`reference_benchmark`は独立系ヴィンテージショップEC等（現在の公開APIの制約上"
+        "「現在在庫切れ」であることしか分からず、**いつ売れたかは一切不明**＝数ヶ月〜数年前の"
+        "可能性もある）の完売実績で、trendの集計には最初から含まれていない。"
+        "reference_benchmarkの数字をtrendの数字と混ぜて「市場全体の平均は◯円」のように語らない"
+        "こと。reference_benchmarkは「◯◯（店名）の完売実績（時期不明・ベンチマーク参考値）」の"
+        "ように、時期不明であることと参考情報である旨を明示した上で、trendとは別立ての独立した"
+        "サブセクションで扱うこと。特定の1店舗が母数の大半を占める場合は、その店舗固有の傾向"
+        "（高単価帯に強い店等）である可能性も明記すること。"
+        "`trend.top_models`（ブランド×モデル/型番単位の件数・価格統計）はアイテムレベルの"
+        "トレンド分析にそのまま使ってよい。",
         f"```json\n{json.dumps(stats, ensure_ascii=False)}\n```",
         "",
         f"## 追跡対象ブランド設定: {json.dumps(watch_brands, ensure_ascii=False)}",
