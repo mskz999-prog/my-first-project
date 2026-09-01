@@ -13,12 +13,13 @@ permissions:
 jobs:
   generate-report:
     runs-on: ubuntu-latest
-    # collect now sweeps ~400 brand+model keywords from config/brand_catalog.yaml
-    # across both Yahoo Auction and Mercari (the latter via a real headless
-    # browser per keyword) — a single scraper pass alone can run well past
-    # the old 30-minute budget, so this gives real headroom for the full
-    # collect -> report pipeline.
-    timeout-minutes: 240
+    # collect now sweeps ~650 keywords from config/brand_catalog.yaml (brand+
+    # model combos, brand katakana aliases, and brand-agnostic item-type
+    # terms) across both Yahoo Auction and Mercari (the latter via a real
+    # headless browser per keyword) — a single scraper pass alone can run
+    # well past the old 30-minute budget, so this gives real headroom for
+    # the full collect -> report pipeline.
+    timeout-minutes: 330
     env:
       # Not secrets: these identifiers only let the workflow request a
       # short-lived token, and the federation rule restricts who can use

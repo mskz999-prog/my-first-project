@@ -31,6 +31,20 @@ def test_fill_missing_brands_does_not_overwrite_existing_brand():
     assert items[0].brand == "ExistingBrand"
 
 
+def test_fill_missing_brands_falls_back_to_katakana_alias():
+    # Real-world case that motivated adding aliases: a listing titled
+    # entirely in katakana ("シアーズ") never contains the English "Sears"
+    # substring, so the plain watch_brands check alone always misses it.
+    items = [
+        MarketItem(source="mercari", title="シアーズ フランネルシャツ 90s", price=4000),
+        MarketItem(source="yahoo_auction", title="Sears flannel shirt", price=3500),
+    ]
+    _fill_missing_brands(items, ["Sears"], {"Sears": ["シアーズ"]})
+
+    assert items[0].brand == "Sears"  # canonical name even though matched via alias
+    assert items[1].brand == "Sears"  # plain English match still takes priority
+
+
 def test_fill_missing_category_matches_genre_keywords():
     items = [
         MarketItem(source="mercari", title="90s Champion リバースウィーブ スウェット", price=8000),
@@ -64,6 +78,14 @@ def test_build_search_keywords_adds_catalog_model_combos():
     keywords = _build_search_keywords(config, catalog)
     assert "Champion リバースウィーブ" in keywords
     assert "Champion T1011" in keywords
+
+
+def test_build_search_keywords_adds_item_keyword_terms():
+    config = {"keywords": ["古着"], "watch_brands": []}
+    item_keywords = [{"term": "ネルシャツ", "category": "シャツ"}, {"term": "フライトジャケット", "category": "ジャケット"}]
+    keywords = _build_search_keywords(config, None, item_keywords)
+    assert "ネルシャツ" in keywords
+    assert "フライトジャケット" in keywords
 
 
 def test_fill_missing_model_only_matches_within_the_items_own_brand():

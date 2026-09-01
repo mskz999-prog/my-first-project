@@ -14,7 +14,15 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from src.pipeline.catalog import build_model_index, catalog_brand_names, catalog_keywords, load_brand_catalog
+from src.pipeline.catalog import (
+    build_alias_index,
+    build_model_index,
+    catalog_brand_names,
+    catalog_keywords,
+    item_keyword_terms,
+    load_brand_catalog,
+    load_item_keywords,
+)
 from src.pipeline.normalize import MarketItem, dedupe, load_manual_csv, save_jsonl
 from src.scrapers import base_ec, mercari, vintage_shops, yahoo_auction
 from src.scrapers.base_scraper import ScraperError
@@ -23,10 +31,14 @@ logger = logging.getLogger(__name__)
 
 
 def _build_search_keywords(
-    config: dict[str, Any], catalog: list[dict[str, Any]] | None = None
+    config: dict[str, Any],
+    catalog: list[dict[str, Any]] | None = None,
+    item_keywords: list[dict[str, Any]] | None = None,
 ) -> list[str]:
-    """Base keywords + one "<brand> 古着" combo per watched brand, plus one
-    "<brand> <model>" combo per config/brand_catalog.yaml entry.
+    """Base keywords + one "<brand> 古着" combo per watched brand, plus
+    catalog-derived keywords: one "<brand> <model>" combo and one keyword
+    per brand alias (see catalog_keywords), plus one standalone keyword per
+    config/brand_catalog.yaml item_keywords entry.
 
     The base keyword list alone (e.g. plain "古着", "ヴィンテージ") tends to
     surface whatever is most generically popular; the per-brand combo
@@ -35,6 +47,9 @@ def _build_search_keywords(
     which is what makes item-level (not just brand-level) trend analysis
     possible: a generic "Champion 古着" search gets buried in irrelevant
     results, but "Champion リバースウィーブ" surfaces exactly that model.
+    item_keywords covers the flip side — garment/style terms
+    ("ネルシャツ", "フライトジャケット") that show up in listings with no
+    readable brand tag at all, so no brand+model combo would ever find them.
     """
     keywords = list(dict.fromkeys(config.get("keywords", [])))  # de-dupe, keep order
     for brand in config.get("watch_brands", []):
@@ -44,6 +59,9 @@ def _build_search_keywords(
     for combo in catalog_keywords(catalog or []):
         if combo not in keywords:
             keywords.append(combo)
+    for term in item_keyword_terms(item_keywords or []):
+        if term not in keywords:
+            keywords.append(term)
     return keywords
 
 
@@ -67,6 +85,7 @@ GENRE_KEYWORDS: dict[str, tuple[str, ...]] = {
     "パンツ": ("パンツ", "ズボン", "pants", "trousers"),
     "ショーツ": ("ショーツ", "ショートパンツ", "shorts"),
     "バッグ": ("バッグ", "bag"),
+    "キャップ・帽子": ("キャップ", "帽子", "ハット", "cap", "hat"),
 }
 
 
@@ -87,8 +106,13 @@ def _fill_missing_category(items: list[MarketItem]) -> None:
                 break
 
 
-def _fill_missing_brands(items: list[MarketItem], watch_brands: list[str]) -> None:
-    """Best-effort brand tagging by matching watch_brands against the title.
+def _fill_missing_brands(
+    items: list[MarketItem],
+    watch_brands: list[str],
+    brand_aliases: dict[str, list[str]] | None = None,
+) -> None:
+    """Best-effort brand tagging by matching watch_brands (and their
+    Japanese/katakana aliases) against the title.
 
     None of the scrapers extract a structured brand field (Yahoo/Mercari/
     vintage-shop titles are free text), so every scraped item's `brand`
@@ -103,11 +127,21 @@ def _fill_missing_brands(items: list[MarketItem], watch_brands: list[str]) -> No
     `watch_brands` is expected to already include the brand_catalog.yaml
     brand names (see collect_all) so this also tags items against the much
     larger catalog, not just the handful of headline watch_brands in
-    config.yaml.
+    config.yaml. `brand_aliases` (brand -> katakana names, from
+    catalog.build_alias_index) is checked as a fallback when the English
+    brand name itself doesn't appear — many Japanese-titled listings write
+    the brand in katakana only (e.g. "シアーズ"), which would never match
+    the English "Sears" substring check alone. Either way `item.brand` is
+    always set to the canonical (English) brand name for consistency.
     """
     if not watch_brands:
         return
     lowered_brands = [(b, b.lower()) for b in watch_brands]
+    lowered_aliases = [
+        (brand, alias.lower())
+        for brand, aliases in (brand_aliases or {}).items()
+        for alias in aliases
+    ]
     for item in items:
         if item.brand:
             continue
@@ -116,6 +150,11 @@ def _fill_missing_brands(items: list[MarketItem], watch_brands: list[str]) -> No
             if lowered in title_lower:
                 item.brand = original
                 break
+        else:
+            for original, lowered in lowered_aliases:
+                if lowered in title_lower:
+                    item.brand = original
+                    break
 
 
 def _fill_missing_model(items: list[MarketItem], model_index: dict[str, list[str]]) -> None:
@@ -148,11 +187,14 @@ def collect_all(config: dict[str, Any], project_root: Path) -> tuple[list[Market
     items: list[MarketItem] = []
     sources_cfg = config.get("sources", {})
     catalog = load_brand_catalog()
-    search_keywords = _build_search_keywords(config, catalog)
+    item_keywords = load_item_keywords()
+    search_keywords = _build_search_keywords(config, catalog, item_keywords)
     logger.info(
-        "collect_all: %d total search keywords (%d brand_catalog.yaml entries)",
+        "collect_all: %d total search keywords (%d brand_catalog.yaml entries, "
+        "%d item_keywords entries)",
         len(search_keywords),
         len(catalog),
+        len(item_keywords),
     )
 
     yahoo_cfg = sources_cfg.get("yahoo_auction", {})
@@ -223,7 +265,7 @@ def collect_all(config: dict[str, Any], project_root: Path) -> tuple[list[Market
 
     deduped = dedupe(items)
     watch_brands = list(dict.fromkeys(config.get("watch_brands", []) + catalog_brand_names(catalog)))
-    _fill_missing_brands(deduped, watch_brands)
+    _fill_missing_brands(deduped, watch_brands, build_alias_index(catalog))
     _fill_missing_model(deduped, build_model_index(catalog))
     _fill_missing_category(deduped)
     brand_tagged = sum(1 for i in deduped if i.brand)
