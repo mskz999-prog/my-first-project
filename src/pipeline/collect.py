@@ -38,6 +38,32 @@ def _build_search_keywords(config: dict[str, Any]) -> list[str]:
     return keywords
 
 
+def _fill_missing_brands(items: list[MarketItem], watch_brands: list[str]) -> None:
+    """Best-effort brand tagging by matching watch_brands against the title.
+
+    None of the scrapers extract a structured brand field (Yahoo/Mercari/
+    vintage-shop titles are free text), so every scraped item's `brand`
+    starts out None — only manually-entered CSV rows had one. That left
+    _quick_stats' brand breakdown effectively empty even with thousands of
+    real items collected, so the report had nothing concrete to say about
+    watch_brands and fell back to generic, ungrounded-sounding text. This
+    fills `brand` in place wherever a watched brand's name (case-insensitive)
+    appears in the title and no brand was already set (e.g. from a manual
+    CSV, which is trusted as-is and left untouched).
+    """
+    if not watch_brands:
+        return
+    lowered_brands = [(b, b.lower()) for b in watch_brands]
+    for item in items:
+        if item.brand:
+            continue
+        title_lower = item.title.lower()
+        for original, lowered in lowered_brands:
+            if lowered in title_lower:
+                item.brand = original
+                break
+
+
 def collect_all(config: dict[str, Any], project_root: Path) -> tuple[list[MarketItem], Path]:
     """Collect from every enabled source and return (items, saved_jsonl_path)."""
     items: list[MarketItem] = []
@@ -111,7 +137,14 @@ def collect_all(config: dict[str, Any], project_root: Path) -> tuple[list[Market
     logger.info("manual: loaded %d items from %s", manual_count, manual_dir)
 
     deduped = dedupe(items)
-    logger.info("collect_all: %d raw -> %d after dedupe", len(items), len(deduped))
+    _fill_missing_brands(deduped, config.get("watch_brands", []))
+    brand_tagged = sum(1 for i in deduped if i.brand)
+    logger.info(
+        "collect_all: %d raw -> %d after dedupe (%d have a brand tag)",
+        len(items),
+        len(deduped),
+        brand_tagged,
+    )
 
     raw_dir = project_root / "data" / "raw"
     timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
