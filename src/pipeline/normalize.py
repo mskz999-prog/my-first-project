@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import csv
 import json
+from collections import defaultdict
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
@@ -107,8 +108,15 @@ def to_summary_json(items: list[MarketItem], max_items: int = 400) -> str:
     """Serialize (a capped number of) items to compact JSON for the LLM prompt.
 
     Capping keeps the prompt within a reasonable token budget even when a
-    scraper returns a large volume of listings; the most information-dense
-    items (sold, with price and brand) are prioritized.
+    scraper returns a large volume of listings. The cap is split evenly
+    *per source* (not one global top-N ranking) — a source that happens to
+    return far more raw volume than the others (e.g. one vintage-shop
+    Shopify store with thousands of SKUs, vs. a scraper that's only
+    surfacing a couple hundred usable items) would otherwise crowd out
+    every other source's items from the sample entirely, skewing the
+    analysis toward whichever source scraped the most rather than what's
+    actually representative. Within each source's allotment, the most
+    information-dense items (sold, with price and brand) are prioritized.
     """
     def score(item: MarketItem) -> tuple:
         return (
@@ -117,5 +125,14 @@ def to_summary_json(items: list[MarketItem], max_items: int = 400) -> str:
             item.price is not None,
         )
 
-    ranked = sorted(items, key=score, reverse=True)[:max_items]
+    by_source: dict[str, list[MarketItem]] = defaultdict(list)
+    for item in items:
+        by_source[item.source].append(item)
+
+    per_source_cap = max(1, max_items // len(by_source)) if by_source else max_items
+
+    ranked: list[MarketItem] = []
+    for source_items in by_source.values():
+        ranked.extend(sorted(source_items, key=score, reverse=True)[:per_source_cap])
+
     return json.dumps([asdict(i) for i in ranked], ensure_ascii=False)

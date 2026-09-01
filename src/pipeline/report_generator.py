@@ -88,6 +88,20 @@ def _quick_stats(items: list[MarketItem]) -> dict[str, Any]:
     by_source = Counter(i.source for i in items)
     overall = _price_block(prices)
 
+    source_prices: dict[str, list[int]] = defaultdict(list)
+    for i in sold:
+        if i.price:
+            source_prices[i.source].append(i.price)
+    by_source_stats = [
+        {
+            "source": source,
+            "item_count": by_source.get(source, 0),
+            "has_recency_signal": source in ("yahoo_auction", "mercari"),
+            **_price_block(prices_),
+        }
+        for source, prices_ in source_prices.items()
+    ]
+
     return {
         "total_items": len(items),
         "total_sold_with_price": len(sold),
@@ -96,6 +110,7 @@ def _quick_stats(items: list[MarketItem]) -> dict[str, Any]:
         "overall_min_price": overall["min_price"],
         "overall_max_price": overall["max_price"],
         "items_by_source": dict(by_source),
+        "by_source_price_stats": by_source_stats,
         "top_brands": top_brands,
         "top_categories": top_categories,
         "brand_category_breakdown": brand_category_breakdown,
@@ -115,6 +130,15 @@ def build_user_message(
         f"# 入力データ（直近{lookback_days}日分・自動収集＋手動データ統合）",
         "",
         "## サーバー側で事前集計した確定値（この数値はそのまま正として使用してよい）",
+        "重要: `by_source_price_stats`の`has_recency_signal`に注意すること。"
+        "`yahoo_auction`と`mercari`は「直近の落札/売却」を検索した結果なので比較的直近の"
+        "取引を反映しているが、`vintage_shop`（独立系ショップEC）は現在の公開APIの制約上"
+        "「現在在庫切れ」であることしか分からず、**いつ売れたかは一切不明**（数ヶ月〜数年前の"
+        "可能性もある）。`vintage_shop`のデータを「今週の成約」「今週売れた」のように断定的に"
+        "書かないこと。「◯◯（店名）の完売実績（時期不明・ベンチマーク参考値）」のように、"
+        "時期不明であることを明示した上で扱うこと。また特定の1店舗が母数の大半を占める場合は、"
+        "その店舗固有の傾向（高単価帯に強い店等）である可能性を明記し、市場全体の傾向として"
+        "一般化しすぎないこと。",
         f"```json\n{json.dumps(stats, ensure_ascii=False)}\n```",
         "",
         f"## 追跡対象ブランド設定: {json.dumps(watch_brands, ensure_ascii=False)}",

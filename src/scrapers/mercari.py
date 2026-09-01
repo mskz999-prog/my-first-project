@@ -87,6 +87,23 @@ def _scrape_with_browser(
                     time.sleep(request_interval_sec)
                     continue
 
+                # Mercari lazy-loads results as the page is scrolled — only
+                # the items in the initial viewport render otherwise
+                # (observed capped at ~10/keyword regardless of
+                # max_items_per_keyword). Scroll a few times, stopping
+                # early once no new items appear or the target is reached.
+                item_selector = f"a[href*='{ITEM_URL_FRAGMENT}']"
+                previous_count = page.locator(item_selector).count()
+                for _ in range(8):
+                    if previous_count >= max_items_per_keyword:
+                        break
+                    page.mouse.wheel(0, 4000)
+                    page.wait_for_timeout(800)
+                    current_count = page.locator(item_selector).count()
+                    if current_count <= previous_count:
+                        break
+                    previous_count = current_count
+
                 html = page.content()
                 soup = BeautifulSoup(html, "lxml")
                 candidates = find_item_candidates(soup, ITEM_URL_FRAGMENT)
