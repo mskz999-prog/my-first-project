@@ -73,7 +73,10 @@ def test_real_brand_catalog_loads_and_has_expected_scale():
 
     # A handful of brands specifically flagged as missing in feedback —
     # regression guard against them silently disappearing again.
-    for expected_brand in ("Big Mac", "Arrow", "Towncraft", "Sears", "Montgomery Ward", "Five Brothers", "Delmar"):
+    for expected_brand in (
+        "Big Mac", "Arrow", "Towncraft", "Sears", "Montgomery Ward", "Five Brothers", "Delmar",
+        "Santa Cruz", "Thrasher", "Birdhouse",
+    ):
         assert expected_brand in brands
 
 

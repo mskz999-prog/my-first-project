@@ -785,6 +785,141 @@ catalog:
     models: ["ニットセーター"]
     aliases: ["クージー"]
 
+  # --- streetwear 追加: スケートブランド ------------------------------------
+  - brand: "Birdhouse"
+    tier: "streetwear"
+    models: ["ロゴT", "デッキ"]
+    aliases: ["バードハウス"]
+
+  - brand: "DC Shoes"
+    tier: "streetwear"
+    models: ["ロゴT", "スケートシューズ"]
+    aliases: ["ディーシーシューズ"]
+
+  - brand: "Etnies"
+    tier: "streetwear"
+    models: ["スケートシューズ"]
+    aliases: ["エトニーズ"]
+
+  - brand: "Emerica"
+    tier: "streetwear"
+    models: ["スケートシューズ"]
+    aliases: ["エメリカ"]
+
+  - brand: "eS"
+    tier: "streetwear"
+    models: ["スケートシューズ"]
+
+  - brand: "Osiris"
+    tier: "streetwear"
+    models: ["スケートシューズ"]
+    aliases: ["オサイラス"]
+
+  - brand: "World Industries"
+    tier: "streetwear"
+    models: ["ロゴT", "デッキ"]
+    aliases: ["ワールドインダストリーズ"]
+
+  - brand: "Element"
+    tier: "streetwear"
+    models: ["ロゴT", "パーカー"]
+    aliases: ["エレメント"]
+
+  - brand: "Zoo York"
+    tier: "streetwear"
+    models: ["ロゴT"]
+    aliases: ["ズーヨーク"]
+
+  - brand: "Girl Skateboards"
+    tier: "streetwear"
+    models: ["デッキ", "ロゴT"]
+    aliases: ["ガールスケートボード"]
+
+  - brand: "Chocolate Skateboards"
+    tier: "streetwear"
+    models: ["デッキ", "ロゴT"]
+    aliases: ["チョコレートスケートボード"]
+
+  - brand: "Blind"
+    tier: "streetwear"
+    models: ["デッキ", "ロゴT"]
+    aliases: ["ブラインド"]
+
+  - brand: "Toy Machine"
+    tier: "streetwear"
+    models: ["デッキ", "ロゴT"]
+    aliases: ["トイマシーン"]
+
+  - brand: "Alien Workshop"
+    tier: "streetwear"
+    models: ["デッキ", "ロゴT"]
+    aliases: ["エイリアンワークショップ"]
+
+  - brand: "Anti-Hero"
+    tier: "streetwear"
+    models: ["デッキ", "ロゴT"]
+    aliases: ["アンタイヒーロー"]
+
+  - brand: "Real Skateboards"
+    tier: "streetwear"
+    models: ["デッキ", "ロゴT"]
+    aliases: ["リアルスケートボード"]
+
+  - brand: "Spitfire"
+    tier: "streetwear"
+    models: ["ロゴT"]
+    aliases: ["スピットファイア"]
+
+  - brand: "Bones Wheels"
+    tier: "streetwear"
+    models: ["ロゴT"]
+    aliases: ["ボーンズウィール"]
+
+  - brand: "Volcom"
+    tier: "streetwear"
+    models: ["ロゴT", "トラックジャケット"]
+    aliases: ["ボルコム"]
+
+  - brand: "RVCA"
+    tier: "streetwear"
+    models: ["ロゴT"]
+    aliases: ["ルーカ"]
+
+  - brand: "Dogtown"
+    tier: "streetwear"
+    models: ["ロゴT"]
+    aliases: ["ドッグタウン"]
+
+  - brand: "Zero Skateboards"
+    tier: "streetwear"
+    models: ["デッキ", "ロゴT"]
+    aliases: ["ゼロスケートボード"]
+
+  - brand: "Baker"
+    tier: "streetwear"
+    models: ["デッキ", "ロゴT"]
+    aliases: ["ベイカー"]
+
+  - brand: "Deathwish"
+    tier: "streetwear"
+    models: ["デッキ", "ロゴT"]
+    aliases: ["デスウィッシュ"]
+
+  - brand: "Plan B"
+    tier: "streetwear"
+    models: ["デッキ", "ロゴT"]
+    aliases: ["プランビー"]
+
+  - brand: "Foundation"
+    tier: "streetwear"
+    models: ["デッキ", "ロゴT"]
+    aliases: ["ファウンデーション"]
+
+  - brand: "Enjoi"
+    tier: "streetwear"
+    models: ["デッキ", "ロゴT"]
+    aliases: ["エンジョイ"]
+
   # --- outdoor: アウトドア/機能系 --------------------------------------------------
 
   - brand: "Marmot"
