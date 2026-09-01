@@ -49,7 +49,23 @@ def _parse_page(html: str) -> list[MarketItem]:
     soup = BeautifulSoup(html, "lxml")
     items: list[MarketItem] = []
 
-    for candidate in find_item_candidates(soup, ITEM_URL_FRAGMENT):
+    candidates = find_item_candidates(soup, ITEM_URL_FRAGMENT)
+    if candidates:
+        # TEMPORARY DEBUG: many Yahoo items came back with price=None in a
+        # prior run. Log the first candidate's raw surrounding text so we
+        # can see in the Actions log whether a ¥/円 marker is actually
+        # present near the price (vs. rendered as an icon/image, which
+        # extract_price can't see as text). Remove once confirmed either
+        # way — cheap to keep for a run or two given the low item count.
+        first = candidates[0]
+        logger.info(
+            "yahoo_auction: sample candidate title=%r price=%r container_text=%r",
+            first["title"][:60],
+            first["price"],
+            first["container_text"][:150],
+        )
+
+    for candidate in candidates:
         if not candidate["title"]:
             continue
         href = candidate["href"]

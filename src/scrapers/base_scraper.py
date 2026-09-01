@@ -94,14 +94,25 @@ def safe_int(value: Optional[str]) -> Optional[int]:
 
 
 _PRICE_PATTERN = re.compile(r"[¥￥]\s?([\d,]{2,})|([\d,]{2,})\s?円")
+# Fallback for sites that render the currency mark as an icon/image rather
+# than text (so no ¥/円 character actually appears near the number) — a
+# bare comma-grouped number with 3+ digits (e.g. "8,500"). Looser and more
+# prone to false positives (could match a date, quantity, etc.), so it's
+# only tried when the anchored pattern above finds nothing.
+_BARE_NUMBER_PATTERN = re.compile(r"\b\d{1,3}(?:,\d{3})+\b")
 
 
 def extract_price(text: str) -> Optional[int]:
-    """Find a JPY price (¥1,234 or 1,234円) anywhere in a text blob."""
+    """Find a JPY price (¥1,234 or 1,234円) anywhere in a text blob.
+
+    Falls back to a bare comma-grouped number (e.g. "8,500") if no ¥/円
+    marker is found — see _BARE_NUMBER_PATTERN.
+    """
     match = _PRICE_PATTERN.search(text)
-    if not match:
-        return None
-    return safe_int(match.group(1) or match.group(2))
+    if match:
+        return safe_int(match.group(1) or match.group(2))
+    fallback = _BARE_NUMBER_PATTERN.search(text)
+    return safe_int(fallback.group(0)) if fallback else None
 
 
 def find_item_candidates(

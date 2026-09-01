@@ -20,6 +20,18 @@ def test_extract_price_no_match():
     assert extract_price("SOLD OUT") is None
 
 
+def test_extract_price_falls_back_to_bare_comma_number():
+    # Some sites render the yen mark as an icon/image, not text — no ¥/円
+    # character actually appears near the number.
+    assert extract_price("8,500") == 8500
+
+
+def test_extract_price_prefers_yen_marker_over_bare_number():
+    # When both a marked price and an unrelated bare number are present,
+    # the anchored ¥/円 match should win (it's checked first).
+    assert extract_price("¥8,500 (在庫 1,234)") == 8500
+
+
 def test_find_item_candidates_yahoo_like_markup():
     html = """
     <li class="Product_abc123">

@@ -116,7 +116,7 @@ manual_data_dir: "data/manual"
 # ---------------------------------------------------------------------------
 report:
   model: "claude-sonnet-5"
-  max_tokens: 12000   # 4セクション分＋Web検索のツール往復もあるため余裕を持たせている
+  max_tokens: 16000   # 4セクション分＋Web検索の往復（最大10回）もあるため余裕を持たせている
   output_dir: "data/reports"
   # 分析対象期間（直近N日をレポート化）
   lookback_days: 7
@@ -125,4 +125,4 @@ report:
   # レポート生成時にClaudeがWeb検索でX/Threadsの古着トレンド話題を調べられるようにする
   # （価格スクレイピングとは別に、SNSの盛り上がりトピックをレポートに反映するための機能）
   web_search_enabled: true
-  web_search_max_uses: 6   # 1回のレポート生成あたりの検索回数上限（コスト抑制用）
+  web_search_max_uses: 10   # 1回のレポート生成あたりの検索回数上限（トレンド/事件性/海外動向の複数切り口をカバーするため引き上げ）

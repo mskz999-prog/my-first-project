@@ -96,6 +96,21 @@ def _scrape_html_shop(shop_cfg: dict[str, Any], session: RateLimitedSession) -> 
                 )
                 break
 
+            # TEMPORARY DEBUG: a prior run showed suspiciously high prices
+            # for berberjin/acorn items (e.g. 90s Champion reverse weave
+            # averaging six figures in yen). Log the first candidate's raw
+            # surrounding text so we can confirm in the Actions log whether
+            # extract_price is picking up the actual selling price or
+            # something else nearby (a reference/MSRP price, a SKU, etc).
+            first = candidates[0]
+            logger.info(
+                "%s: sample candidate title=%r price=%r container_text=%r",
+                shop_name,
+                first["title"][:60],
+                first["price"],
+                first["container_text"][:200],
+            )
+
             for c in candidates:
                 if not c["title"]:
                     continue
@@ -133,6 +148,20 @@ def _scrape_shopify_shop(shop_cfg: dict[str, Any], session: RateLimitedSession) 
         products = data.get("products", [])
         if not products:
             break
+
+        if page == 1:
+            # TEMPORARY DEBUG: log the raw variant price strings for the
+            # first couple of products, unmodified, to confirm the store's
+            # actual currency/scale (Shopify's /products.json price field
+            # is a decimal-major-unit string, but doesn't say what
+            # currency it's denominated in).
+            for sample in products[:2]:
+                logger.info(
+                    "%s: sample product title=%r raw_variant_prices=%r",
+                    shop_name,
+                    sample.get("title", "")[:60],
+                    [v.get("price") for v in sample.get("variants", [])],
+                )
 
         for product in products:
             title = product.get("title")

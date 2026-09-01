@@ -38,6 +38,46 @@ def _build_search_keywords(config: dict[str, Any]) -> list[str]:
     return keywords
 
 
+# Genre/category keyword dictionary for _fill_missing_category. Ordered
+# so more specific terms are checked before terms they could be confused
+# with (e.g. "オーバーオール" before a generic catch-all would matter more
+# once one exists; for now order mostly doesn't matter since categories
+# are mutually distinct enough).
+GENRE_KEYWORDS: dict[str, tuple[str, ...]] = {
+    "スウェット": ("スウェット", "sweat shirt", "sweatshirt"),
+    "パーカー": ("パーカー", "フーディー", "hoodie"),
+    "Tシャツ": ("tシャツ", "t-shirt", "tシャツ"),
+    "デニム": ("デニム", "ジーンズ", "denim", "jeans"),
+    "オーバーオール": ("オーバーオール", "コンビオール", "つなぎ", "coverall", "overall"),
+    "ジャケット": ("ジャケット", "ブルゾン", "jacket"),
+    "フリース": ("フリース", "fleece", "シンチラ", "synchilla"),
+    "シャツ": ("シャツ", "shirt"),
+    "コート": ("コート", "coat"),
+    "ニット・セーター": ("ニット", "セーター", "knit", "sweater"),
+    "ベスト": ("ベスト", "vest"),
+    "パンツ": ("パンツ", "ズボン", "pants", "trousers"),
+    "ショーツ": ("ショーツ", "ショートパンツ", "shorts"),
+    "バッグ": ("バッグ", "bag"),
+}
+
+
+def _fill_missing_category(items: list[MarketItem]) -> None:
+    """Best-effort genre tagging by matching a keyword dictionary against
+    the title, the same approach as _fill_missing_brands. Lets
+    _quick_stats (and the report) break brand-level numbers down by
+    garment type instead of lumping e.g. all Champion items together
+    regardless of whether they're sweatshirts or t-shirts.
+    """
+    for item in items:
+        if item.category:
+            continue
+        title_lower = item.title.lower()
+        for genre, keywords in GENRE_KEYWORDS.items():
+            if any(kw in title_lower for kw in keywords):
+                item.category = genre
+                break
+
+
 def _fill_missing_brands(items: list[MarketItem], watch_brands: list[str]) -> None:
     """Best-effort brand tagging by matching watch_brands against the title.
 
@@ -138,12 +178,15 @@ def collect_all(config: dict[str, Any], project_root: Path) -> tuple[list[Market
 
     deduped = dedupe(items)
     _fill_missing_brands(deduped, config.get("watch_brands", []))
+    _fill_missing_category(deduped)
     brand_tagged = sum(1 for i in deduped if i.brand)
+    category_tagged = sum(1 for i in deduped if i.category)
     logger.info(
-        "collect_all: %d raw -> %d after dedupe (%d have a brand tag)",
+        "collect_all: %d raw -> %d after dedupe (%d have a brand tag, %d have a category tag)",
         len(items),
         len(deduped),
         brand_tagged,
+        category_tagged,
     )
 
     raw_dir = project_root / "data" / "raw"

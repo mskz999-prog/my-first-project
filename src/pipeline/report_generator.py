@@ -34,37 +34,71 @@ def _load_hashtags(manual_dir: Path) -> list[dict[str, str]]:
         return list(csv.DictReader(f))
 
 
+def _price_block(prices: list[int]) -> dict[str, Any]:
+    if not prices:
+        return {"sold_count": 0, "avg_price": None, "median_price": None, "min_price": None, "max_price": None}
+    return {
+        "sold_count": len(prices),
+        "avg_price": round(mean(prices)),
+        "median_price": round(median(prices)),
+        "min_price": min(prices),
+        "max_price": max(prices),
+    }
+
+
 def _quick_stats(items: list[MarketItem]) -> dict[str, Any]:
     """Compute a small set of aggregate stats server-side (not by the LLM)
-    so the report's headline numbers are exact, not model-estimated."""
+    so the report's headline numbers are exact, not model-estimated.
+
+    Includes min/max alongside avg/median specifically so an implausible
+    outlier (e.g. a mis-extracted price) is visible in the numbers handed
+    to the model, instead of only surfacing once buried in an average.
+    """
     sold = [i for i in items if i.is_sold and i.price]
     prices = [i.price for i in sold if i.price]
 
-    brand_counter = Counter(i.brand for i in sold if i.brand)
     brand_prices: dict[str, list[int]] = defaultdict(list)
+    category_prices: dict[str, list[int]] = defaultdict(list)
+    brand_category_prices: dict[tuple[str, str], list[int]] = defaultdict(list)
     for i in sold:
-        if i.brand and i.price:
+        if not i.price:
+            continue
+        if i.brand:
             brand_prices[i.brand].append(i.price)
+        if i.category:
+            category_prices[i.category].append(i.price)
+        if i.brand and i.category:
+            brand_category_prices[(i.brand, i.category)].append(i.price)
 
     top_brands = [
-        {
-            "brand": brand,
-            "sold_count": count,
-            "avg_price": round(mean(brand_prices[brand])) if brand_prices[brand] else None,
-            "median_price": round(median(brand_prices[brand])) if brand_prices[brand] else None,
-        }
-        for brand, count in brand_counter.most_common(15)
+        {"brand": brand, **_price_block(prices_)}
+        for brand, prices_ in sorted(brand_prices.items(), key=lambda kv: -len(kv[1]))[:15]
+    ]
+    top_categories = [
+        {"category": category, **_price_block(prices_)}
+        for category, prices_ in sorted(category_prices.items(), key=lambda kv: -len(kv[1]))[:15]
+    ]
+    brand_category_breakdown = [
+        {"brand": brand, "category": category, **_price_block(prices_)}
+        for (brand, category), prices_ in sorted(
+            brand_category_prices.items(), key=lambda kv: -len(kv[1])
+        )[:30]
     ]
 
     by_source = Counter(i.source for i in items)
+    overall = _price_block(prices)
 
     return {
         "total_items": len(items),
         "total_sold_with_price": len(sold),
-        "overall_avg_price": round(mean(prices)) if prices else None,
-        "overall_median_price": round(median(prices)) if prices else None,
+        "overall_avg_price": overall["avg_price"],
+        "overall_median_price": overall["median_price"],
+        "overall_min_price": overall["min_price"],
+        "overall_max_price": overall["max_price"],
         "items_by_source": dict(by_source),
         "top_brands": top_brands,
+        "top_categories": top_categories,
+        "brand_category_breakdown": brand_category_breakdown,
     }
 
 
