@@ -1,0 +1,12 @@
+.env
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Scraped raw data can be large / contain third-party content; keep local only.
+data/raw/*
+!data/raw/.gitkeep
+
+# Generated reports are the actual deliverable and ARE committed by the
+# weekly workflow, so they are intentionally NOT ignored.

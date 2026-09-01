@@ -1,0 +1,68 @@
+# ==========================================================================
+# 古着せどり・バイヤー向け市場データ自動収集 & レポート生成パイプライン設定
+# ==========================================================================
+
+# レポート化したい市場（複数指定すると全て横断集計される）
+keywords:
+  - "古着"
+  - "ヴィンテージ"
+  - "アメカジ"
+  - "デッドストック"
+
+# 追跡したいブランド（空なら全ブランド対象でトレンド抽出）
+watch_brands:
+  - "Champion"
+  - "Levi's"
+  - "Patagonia"
+  - "POLO RALPH LAUREN"
+  - "Carhartt"
+  - "Supreme"
+
+# ---------------------------------------------------------------------------
+# データソースごとの収集設定
+# ---------------------------------------------------------------------------
+sources:
+  yahoo_auction:
+    enabled: true
+    # https://auctions.yahoo.co.jp/closedsearch/closedsearch/<keyword>/0 を使用
+    max_pages_per_keyword: 3          # 1ページ ~50件。控えめな既定値。
+    request_interval_sec: 2.5         # 相手サーバー負荷を抑えるための最小間隔
+
+  mercari:
+    enabled: true
+    # Mercari は反スクレイピング対策の変更が頻繁で壊れやすいため best-effort。
+    # 失敗時は data/manual/ に置いた手動エクスポートCSVへ自動フォールバックする。
+    max_items_per_keyword: 100
+    request_interval_sec: 3.0
+    status: "sold_out"                # 成約済みのみ対象
+
+  base_ec:
+    enabled: true
+    # 監視したいBASEショップの公開URLを列挙する（各ショップの利用規約を確認の上、設定すること）
+    shop_urls:
+      - "https://example-vintage-shop.thebase.in/"
+    request_interval_sec: 2.0
+
+  sns_hashtags:
+    enabled: false
+    # Instagram は公式Graph APIがビジネスアカウント連携必須かつ機能制限が大きいため、
+    # 既定では無効。手動でハッシュタグの投稿数・伸び傾向をdata/manual/hashtags.csvに
+    # 記録して読み込む運用を推奨。
+    manual_file: "data/manual/hashtags.csv"
+
+# ---------------------------------------------------------------------------
+# 手動データフォールバック（スクレイパーが失敗/未対応でも必ず読み込まれる）
+# ---------------------------------------------------------------------------
+manual_data_dir: "data/manual"
+
+# ---------------------------------------------------------------------------
+# レポート生成設定
+# ---------------------------------------------------------------------------
+report:
+  model: "claude-sonnet-5"
+  max_tokens: 8000
+  output_dir: "data/reports"
+  # 分析対象期間（直近N日をレポート化）
+  lookback_days: 7
+  # note有料エリアの想定販売価格帯などをレポートに明示させたい場合のヒント
+  currency: "JPY"
