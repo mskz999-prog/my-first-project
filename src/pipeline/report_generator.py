@@ -134,6 +134,21 @@ def generate_report(
     system_prompt = _load_system_prompt()
     user_message = build_user_message(items, hashtags, config)
 
+    tools = None
+    if report_cfg.get("web_search_enabled", True):
+        # Lets Claude look up recent X/Threads buzz around vintage/used
+        # clothing itself during generation (see phase 1 of the system
+        # prompt) instead of us scraping X/Threads directly — both of
+        # which are either paywalled (X's search API) or don't expose a
+        # third-party keyword-search endpoint at all (Threads API).
+        tools = [
+            {
+                "type": "web_search_20260209",
+                "name": "web_search",
+                "max_uses": report_cfg.get("web_search_max_uses", 6),
+            }
+        ]
+
     client = anthropic.Anthropic(api_key=api_key) if api_key else anthropic.Anthropic()
     logger.info("Calling Claude (%s) to generate report from %d items", model, len(items))
     response = client.messages.create(
@@ -141,6 +156,7 @@ def generate_report(
         max_tokens=max_tokens,
         system=system_prompt,
         messages=[{"role": "user", "content": user_message}],
+        **({"tools": tools} if tools else {}),
     )
     report_markdown = "".join(
         block.text for block in response.content if getattr(block, "type", None) == "text"

@@ -31,6 +31,13 @@
 3. **レポート生成**（`src/pipeline/report_generator.py`）
    - `src/prompts/system_prompt.md`（4フェーズのシステムプロンプト）とデータをClaudeに渡し、
      `data/reports/YYYY-MM-DD_vintage-resale-report.md` を生成
+   - **SNSトレンド（X/Threads）**: X・ThreadsはAPI経由での話題検索が実質不可（Xの検索APIは
+     有料プラン必須、Threads APIはサードパーティのキーワード検索を提供していない）ため、
+     直接スクレイピングはせず、レポート生成時にClaudeへ**Web検索ツール**
+     （`web_search_20260209`）を渡し、Claude自身にX/Threadsで話題の古着トピックを
+     Web検索で調べさせてレポートに反映させている。価格情報に限らず、スタイリング流行や
+     バズった投稿なども対象。`config.yaml`の`report.web_search_enabled` / 
+     `web_search_max_uses`でON/OFF・検索回数上限を調整可能
 4. **週次自動実行**（`.github/workflows/weekly_report.yml`）
    - 毎週月曜 9:00 JST（UTC 00:00）にGitHub Actionsで自動実行し、レポートをコミット＋
      ワークフローのアーティファクトとしても保存

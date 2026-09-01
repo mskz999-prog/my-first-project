@@ -118,3 +118,7 @@ report:
   lookback_days: 7
   # note有料エリアの想定販売価格帯などをレポートに明示させたい場合のヒント
   currency: "JPY"
+  # レポート生成時にClaudeがWeb検索でX/Threadsの古着トレンド話題を調べられるようにする
+  # （価格スクレイピングとは別に、SNSの盛り上がりトピックをレポートに反映するための機能）
+  web_search_enabled: true
+  web_search_max_uses: 6   # 1回のレポート生成あたりの検索回数上限（コスト抑制用）
