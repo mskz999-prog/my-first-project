@@ -42,6 +42,14 @@ jobs:
             core.setSecret(token);
             core.exportVariable('ANTHROPIC_IDENTITY_TOKEN', token);
 
+            // TEMPORARY DEBUG: log the token's sub/aud claims (not the
+            // token itself) so we can match the federation rule's subject
+            // prefix against what GitHub actually sends. Remove once the
+            // rule is confirmed working.
+            const payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64url').toString('utf8'));
+            core.info(`OIDC sub claim: ${payload.sub}`);
+            core.info(`OIDC aud claim: ${JSON.stringify(payload.aud)}`);
+
       - name: Run pipeline (collect + generate report)
         run: python -m src.main run
 
