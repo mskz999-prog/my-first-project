@@ -17,11 +17,13 @@ intervals conservative, and prefer official APIs or manual export
 from __future__ import annotations
 
 import logging
+import re
 import time
 from dataclasses import dataclass, field
-from typing import Optional
+from typing import Any, Optional
 
 import requests
+from bs4 import BeautifulSoup, Tag
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
 
 logger = logging.getLogger(__name__)
@@ -89,3 +91,71 @@ def safe_int(value: Optional[str]) -> Optional[int]:
         return None
     digits = "".join(ch for ch in value if ch.isdigit())
     return int(digits) if digits else None
+
+
+_PRICE_PATTERN = re.compile(r"[¥￥]\s?([\d,]{2,})|([\d,]{2,})\s?円")
+
+
+def extract_price(text: str) -> Optional[int]:
+    """Find a JPY price (¥1,234 or 1,234円) anywhere in a text blob."""
+    match = _PRICE_PATTERN.search(text)
+    if not match:
+        return None
+    return safe_int(match.group(1) or match.group(2))
+
+
+def find_item_candidates(
+    soup: BeautifulSoup,
+    href_substring: str,
+    max_ancestor_levels: int = 4,
+) -> list[dict[str, Any]]:
+    """Markup-agnostic item extraction: find every ``<a href>`` containing
+    ``href_substring`` (a stable item-page URL fragment, e.g. ``/item/`` or
+    ``/items/``), then look at a small ancestor chain around each link for a
+    nearby price and a title.
+
+    This deliberately avoids depending on exact CSS class names — those
+    change with every theme/frontend redesign — in favor of two things that
+    stay stable for years: the shape of an item-page URL, and the presence
+    of a price string near it. It trades a bit of precision (occasional
+    wrong price picked up from a neighboring element) for being far less
+    likely to silently return zero results after a markup change.
+    """
+    seen_hrefs: set[str] = set()
+    candidates: list[dict[str, Any]] = []
+
+    for a in soup.find_all("a", href=True):
+        href = a["href"]
+        if href_substring not in href or href in seen_hrefs:
+            continue
+        seen_hrefs.add(href)
+
+        container: Tag = a
+        for _ in range(max_ancestor_levels):
+            parent = container.parent
+            if isinstance(parent, Tag):
+                container = parent
+            else:
+                break
+
+        container_text = container.get_text(" ", strip=True)
+
+        title = None
+        img = a.find("img")
+        if img and img.get("alt"):
+            title = img["alt"].strip()
+        if not title:
+            title = a.get_text(" ", strip=True)
+        if not title:
+            title = container_text[:80]
+
+        candidates.append(
+            {
+                "href": href,
+                "title": title or None,
+                "price": extract_price(container_text),
+                "container_text": container_text,
+            }
+        )
+
+    return candidates

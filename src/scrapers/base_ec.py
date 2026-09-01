@@ -1,9 +1,11 @@
 """BASE (thebase.in) shop storefront scraper.
 
 Scrapes the public product listing page of configured BASE shops
-(config.yaml -> sources.base_ec.shop_urls) and flags items whose product
-card shows a "SOLD OUT" badge. BASE storefronts are static server-rendered
-HTML, which makes this comparatively more stable than the Mercari scraper.
+(config.yaml -> sources.base_ec.shop_urls). Items are found by their
+product-page URL pattern (`/items/<id>`) rather than CSS class names,
+which drift across BASE's many storefront themes — see
+`src.scrapers.base_scraper.find_item_candidates`. A "SOLD OUT" badge is
+detected by keyword search in the text around the link.
 
 Only add shop URLs you have the right to monitor under that shop's terms
 of use / robots.txt — this is intended for tracking your own shop or
@@ -14,14 +16,16 @@ from __future__ import annotations
 
 import logging
 import urllib.parse
-from typing import Optional
 
 from bs4 import BeautifulSoup
 
 from src.pipeline.normalize import MarketItem
-from src.scrapers.base_scraper import RateLimitedSession, ScraperError, safe_int
+from src.scrapers.base_scraper import RateLimitedSession, ScraperError, find_item_candidates
 
 logger = logging.getLogger(__name__)
+
+ITEM_URL_FRAGMENT = "/items/"
+SOLD_OUT_KEYWORDS = ("SOLD OUT", "sold out", "Sold Out", "売り切れ", "完売")
 
 
 def _shop_name_from_url(shop_url: str) -> str:
@@ -33,32 +37,16 @@ def _parse_listing_page(html: str, shop_name: str, shop_url: str) -> list[Market
     soup = BeautifulSoup(html, "lxml")
     items: list[MarketItem] = []
 
-    # BASE's default themes render each product as an <li> with a class
-    # containing "item-list" / "item_index"; kept loose for theme variance.
-    cards = soup.select("li[class*='item-list'], li[class*='item_index'], div[class*='item-box']")
-    for card in cards:
-        title_el = card.select_one("[class*='item-name'], [class*='item_name'], .item-list__title")
-        price_el = card.select_one("[class*='item-price'], [class*='item_price']")
-        link_el = card.select_one("a[href]")
-
-        if not title_el or not link_el:
+    for candidate in find_item_candidates(soup, ITEM_URL_FRAGMENT):
+        if not candidate["title"]:
             continue
-
-        title = title_el.get_text(strip=True)
-        if not title:
-            continue
-
-        sold_badge = card.select_one("[class*='soldout'], [class*='sold-out'], [class*='sold_out']")
-        is_sold = sold_badge is not None
-
-        href = link_el.get("href")
-        url = urllib.parse.urljoin(shop_url, href) if href else None
-
+        is_sold = any(kw in candidate["container_text"] for kw in SOLD_OUT_KEYWORDS)
+        url = urllib.parse.urljoin(shop_url, candidate["href"])
         items.append(
             MarketItem(
                 source="base_ec",
-                title=title,
-                price=safe_int(price_el.get_text(strip=True)) if price_el else None,
+                title=candidate["title"],
+                price=candidate["price"],
                 is_sold=is_sold,
                 url=url,
                 shop_name=shop_name,
@@ -70,7 +58,7 @@ def _parse_listing_page(html: str, shop_name: str, shop_url: str) -> list[Market
 def scrape_shop(
     shop_url: str,
     session: RateLimitedSession,
-    sold_out_only: bool = True,
+    sold_out_only: bool = False,
 ) -> list[MarketItem]:
     shop_name = _shop_name_from_url(shop_url)
     response = session.get(shop_url)
@@ -78,8 +66,8 @@ def scrape_shop(
 
     if not items:
         logger.warning(
-            "base_ec: no product cards parsed for %s — theme markup may "
-            "differ from the default BASE templates this scraper targets.",
+            "base_ec: no product links found for %s — theme markup may "
+            "differ from what this scraper's URL-pattern heuristic expects.",
             shop_url,
         )
 
@@ -91,7 +79,7 @@ def scrape_shop(
 def scrape(
     shop_urls: list[str],
     request_interval_sec: float = 2.0,
-    sold_out_only: bool = True,
+    sold_out_only: bool = False,
 ) -> list[MarketItem]:
     session = RateLimitedSession(interval_sec=request_interval_sec)
     results: list[MarketItem] = []

@@ -9,8 +9,15 @@
 
 1. **データ収集**（`src/scrapers/`）
    - `yahoo_auction.py`: Yahoo!オークションの落札相場ページ（closedsearch）を収集
-   - `mercari.py`: メルカリの売り切れ商品を収集（**best-effort**。後述の注意点を参照）
-   - `base_ec.py`: 設定した BASE ショップの完売商品を収集
+   - `mercari.py`: メルカリの売り切れ商品を収集。JS側でしか結果が描画されないため
+     Playwright（ヘッドレスChromium）でレンダリングして取得する（**best-effort**。
+     後述の注意点を参照）
+   - `base_ec.py`: 設定した BASE ショップの商品（既定では販売中・完売の両方）を収集
+   - Yahoo/BASEは特定のCSSクラス名ではなく、商品ページURLのパターン（`find_item_candidates`,
+     `src/scrapers/base_scraper.py`）を手がかりに抽出するため、テーマ変更に強い
+   - `keywords` に加えて `watch_brands` の各ブランド名×「古着」も自動で検索対象に
+     追加され（`collect.py`の`_build_search_keywords`）、レギュラー古着・ビンテージ
+     古着を問わず網羅的に収集する
    - `data/manual/`: 手動でCSVを置くとスクレイパーの失敗時も自動フォールバック
 2. **正規化・集計**（`src/pipeline/normalize.py`, `collect.py`）
    - 全ソースを共通スキーマ（`MarketItem`）に統合し、重複除去
@@ -27,6 +34,7 @@
 ```bash
 python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
+playwright install chromium   # メルカリ収集用のヘッドレスブラウザ
 cp .env.example .env   # ANTHROPIC_API_KEY を設定
 ```
 

@@ -21,30 +21,46 @@ from src.scrapers.base_scraper import ScraperError
 logger = logging.getLogger(__name__)
 
 
+def _build_search_keywords(config: dict[str, Any]) -> list[str]:
+    """Base keywords + one "<brand> 古着" combo per watched brand.
+
+    The base keyword list alone (e.g. plain "古着", "ヴィンテージ") tends to
+    surface whatever is most generically popular; adding a per-brand combo
+    ensures every brand in watch_brands gets its own dedicated search, so
+    both mainstream and vintage-specific items across all tracked brands
+    are covered rather than just whatever ranks highest for broad terms.
+    """
+    keywords = list(dict.fromkeys(config.get("keywords", [])))  # de-dupe, keep order
+    for brand in config.get("watch_brands", []):
+        combo = f"{brand} 古着"
+        if combo not in keywords:
+            keywords.append(combo)
+    return keywords
+
+
 def collect_all(config: dict[str, Any], project_root: Path) -> list[MarketItem]:
     items: list[MarketItem] = []
     sources_cfg = config.get("sources", {})
-    keywords = config.get("keywords", [])
+    search_keywords = _build_search_keywords(config)
 
     yahoo_cfg = sources_cfg.get("yahoo_auction", {})
-    if yahoo_cfg.get("enabled") and keywords:
+    if yahoo_cfg.get("enabled") and search_keywords:
         try:
-            items.extend(
-                yahoo_auction.scrape(
-                    keywords=keywords,
-                    max_pages_per_keyword=yahoo_cfg.get("max_pages_per_keyword", 3),
-                    request_interval_sec=yahoo_cfg.get("request_interval_sec", 2.5),
-                )
+            yahoo_items = yahoo_auction.scrape(
+                keywords=search_keywords,
+                max_pages_per_keyword=yahoo_cfg.get("max_pages_per_keyword", 3),
+                request_interval_sec=yahoo_cfg.get("request_interval_sec", 2.5),
             )
-            logger.info("yahoo_auction: collected %d items", len(items))
+            items.extend(yahoo_items)
+            logger.info("yahoo_auction: collected %d items", len(yahoo_items))
         except ScraperError as exc:
             logger.warning("yahoo_auction: skipped — %s", exc)
 
     mercari_cfg = sources_cfg.get("mercari", {})
-    if mercari_cfg.get("enabled") and keywords:
+    if mercari_cfg.get("enabled") and search_keywords:
         try:
             mercari_items = mercari.scrape(
-                keywords=keywords,
+                keywords=search_keywords,
                 status=mercari_cfg.get("status", "sold_out"),
                 max_items_per_keyword=mercari_cfg.get("max_items_per_keyword", 100),
                 request_interval_sec=mercari_cfg.get("request_interval_sec", 3.0),
@@ -62,6 +78,7 @@ def collect_all(config: dict[str, Any], project_root: Path) -> list[MarketItem]:
             base_items = base_ec.scrape(
                 shop_urls=base_cfg["shop_urls"],
                 request_interval_sec=base_cfg.get("request_interval_sec", 2.0),
+                sold_out_only=base_cfg.get("sold_out_only", False),
             )
             items.extend(base_items)
             logger.info("base_ec: collected %d items", len(base_items))

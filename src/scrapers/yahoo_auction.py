@@ -7,25 +7,26 @@ This page is server-rendered HTML, viewable without login (it's the same
 page used by public price-research sites such as aucfan), so it is scraped
 with plain requests + BeautifulSoup rather than a headless browser.
 
-NOTE: Yahoo may change this page's markup at any time. If the CSS
-selectors below stop matching, `parse_listing` returns an empty list for
-that page and a warning is logged — it will not crash the pipeline. Verify
-current selectors against a live page if results look empty.
+Items are found by their item-page URL pattern (`/jp/auction/<id>`) rather
+than by CSS class names — Yahoo's generated class names carry hashed
+suffixes that churn on every frontend deploy, while the auction item URL
+scheme has stayed stable for years. See
+`src.scrapers.base_scraper.find_item_candidates`.
 """
 from __future__ import annotations
 
 import logging
 import urllib.parse
-from typing import Optional
 
 from bs4 import BeautifulSoup
 
 from src.pipeline.normalize import MarketItem
-from src.scrapers.base_scraper import RateLimitedSession, ScraperError, safe_int
+from src.scrapers.base_scraper import RateLimitedSession, ScraperError, find_item_candidates
 
 logger = logging.getLogger(__name__)
 
 BASE_URL = "https://auctions.yahoo.co.jp/closedsearch/closedsearch/{keyword}/{offset}"
+ITEM_URL_FRAGMENT = "/jp/auction/"
 
 
 def _build_url(keyword: str, page: int) -> str:
@@ -38,30 +39,16 @@ def _parse_page(html: str) -> list[MarketItem]:
     soup = BeautifulSoup(html, "lxml")
     items: list[MarketItem] = []
 
-    # Each result is a <li> product card; selector kept loose (class
-    # *contains* "Product") since Yahoo's generated class names carry
-    # hashed suffixes that change over time.
-    cards = soup.select("li[class*='Product']")
-    for card in cards:
-        title_el = card.select_one("[class*='Product__title']") or card.select_one("a")
-        price_el = card.select_one("[class*='Product__price']")
-        link_el = card.select_one("a[href]")
-
-        if not title_el or not link_el:
+    for candidate in find_item_candidates(soup, ITEM_URL_FRAGMENT):
+        if not candidate["title"]:
             continue
-
-        title = title_el.get_text(strip=True)
-        price = safe_int(price_el.get_text(strip=True)) if price_el else None
-        url = link_el.get("href")
-
-        if not title:
-            continue
-
+        href = candidate["href"]
+        url = href if href.startswith("http") else f"https://page.auctions.yahoo.co.jp{href}"
         items.append(
             MarketItem(
                 source="yahoo_auction",
-                title=title,
-                price=price,
+                title=candidate["title"],
+                price=candidate["price"],
                 is_sold=True,
                 url=url,
             )
