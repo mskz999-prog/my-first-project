@@ -24,7 +24,7 @@ import logging
 import time
 import urllib.parse
 
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, Tag
 
 from src.pipeline.normalize import MarketItem
 from src.scrapers.base_scraper import ScraperError, find_item_candidates
@@ -114,6 +114,21 @@ def _scrape_with_browser(
                 html = page.content()
                 soup = BeautifulSoup(html, "lxml")
                 candidates = find_item_candidates(soup, ITEM_URL_FRAGMENT)
+
+                # TEMPORARY DEBUG: a prior run got titles for most items but
+                # a price for almost none (1/203). Dump the raw HTML around
+                # one real item link (once per run) to see the actual
+                # structure instead of guessing from extracted text again.
+                if candidates and keyword == keywords[0]:
+                    raw_anchor = soup.find("a", href=lambda h: bool(h) and ITEM_URL_FRAGMENT in h)
+                    if raw_anchor:
+                        ancestor: Tag = raw_anchor
+                        for _ in range(5):
+                            parent = ancestor.parent
+                            if isinstance(parent, Tag):
+                                ancestor = parent
+                        logger.info("mercari: raw markup sample: %s", str(ancestor)[:3000])
+
                 for candidate in candidates[:max_items_per_keyword]:
                     if not candidate["title"]:
                         continue

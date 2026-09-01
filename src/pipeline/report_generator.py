@@ -209,13 +209,21 @@ def generate_report(
 
     client = anthropic.Anthropic(api_key=api_key) if api_key else anthropic.Anthropic()
     logger.info("Calling Claude (%s) to generate report from %d items", model, len(items))
-    response = client.messages.create(
+    # Streaming, not a plain create(): a non-streaming call already took
+    # ~10 minutes in one real run (right at the SDK's default HTTP
+    # timeout), and a sibling run with the same code separately exhausted
+    # the whole max_tokens budget on thinking + web_search tool calls
+    # before writing any report text. Streaming removes the HTTP-timeout
+    # risk, which is what actually lets max_tokens be raised further as
+    # headroom against the second failure mode.
+    with client.messages.stream(
         model=model,
         max_tokens=max_tokens,
         system=system_prompt,
         messages=[{"role": "user", "content": user_message}],
         **({"tools": tools} if tools else {}),
-    )
+    ) as stream:
+        response = stream.get_final_message()
     report_markdown = "".join(
         block.text for block in response.content if getattr(block, "type", None) == "text"
     )

@@ -26,7 +26,7 @@ from __future__ import annotations
 import logging
 import urllib.parse
 
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, Tag
 
 from src.pipeline.normalize import MarketItem
 from src.scrapers.base_scraper import RateLimitedSession, ScraperError, find_item_candidates
@@ -50,20 +50,22 @@ def _parse_page(html: str) -> list[MarketItem]:
     items: list[MarketItem] = []
 
     candidates = find_item_candidates(soup, ITEM_URL_FRAGMENT)
-    if candidates:
-        # TEMPORARY DEBUG: many Yahoo items came back with price=None in a
-        # prior run. Log the first candidate's raw surrounding text so we
-        # can see in the Actions log whether a ¥/円 marker is actually
-        # present near the price (vs. rendered as an icon/image, which
-        # extract_price can't see as text). Remove once confirmed either
-        # way — cheap to keep for a run or two given the low item count.
-        first = candidates[0]
-        logger.info(
-            "yahoo_auction: sample candidate title=%r price=%r container_text=%r",
-            first["title"][:60],
-            first["price"],
-            first["container_text"][:150],
-        )
+
+    # TEMPORARY DEBUG (round 2): the container_text-based sampling from the
+    # last debug pass came back essentially always empty (''), even after
+    # fixing the ancestor climb to tolerate duplicate same-item hrefs —
+    # meaning climbing still stops almost immediately, for a reason that
+    # guessing from extracted text alone hasn't revealed. Dump the actual
+    # raw HTML around one real item link instead, so the real structure is
+    # visible directly rather than inferred.
+    raw_anchor = soup.find("a", href=lambda h: bool(h) and ITEM_URL_FRAGMENT in h)
+    if raw_anchor:
+        ancestor: Tag = raw_anchor
+        for _ in range(5):
+            parent = ancestor.parent
+            if isinstance(parent, Tag):
+                ancestor = parent
+        logger.info("yahoo_auction: raw markup sample: %s", str(ancestor)[:3000])
 
     for candidate in candidates:
         if not candidate["title"]:

@@ -121,7 +121,10 @@ manual_data_dir: "data/manual"
 # ---------------------------------------------------------------------------
 report:
   model: "claude-sonnet-5"
-  max_tokens: 16000   # 4セクション分＋Web検索の往復（最大10回）もあるため余裕を持たせている
+  # ストリーミングAPI呼び出しなのでHTTPタイムアウトの制約なし。thinking(推論)+
+  # 検索往復(最大16回)+本文執筆を全部賄うため大きめに確保している。
+  # 一部の実行でthinking+検索だけでmax_tokensを使い切り本文0文字で失敗した実績あり。
+  max_tokens: 32000
   output_dir: "data/reports"
   # 分析対象期間（直近N日をレポート化）
   lookback_days: 7
