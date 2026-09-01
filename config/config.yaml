@@ -116,7 +116,7 @@ manual_data_dir: "data/manual"
 # ---------------------------------------------------------------------------
 report:
   model: "claude-sonnet-5"
-  max_tokens: 8000
+  max_tokens: 12000   # 4セクション分＋Web検索のツール往復もあるため余裕を持たせている
   output_dir: "data/reports"
   # 分析対象期間（直近N日をレポート化）
   lookback_days: 7

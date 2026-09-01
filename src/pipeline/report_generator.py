@@ -162,6 +162,16 @@ def generate_report(
         block.text for block in response.content if getattr(block, "type", None) == "text"
     )
 
+    if not report_markdown.strip():
+        block_types = [getattr(b, "type", "?") for b in response.content]
+        raise RuntimeError(
+            f"Claude returned no text content (stop_reason={response.stop_reason!r}, "
+            f"content block types={block_types}). Refusing to write an empty report. "
+            "This usually means max_tokens was hit before any report text was "
+            "generated (e.g. spent on web_search tool calls) — try raising "
+            "report.max_tokens or lowering report.web_search_max_uses in config.yaml."
+        )
+
     output_dir = project_root / report_cfg.get("output_dir", "data/reports")
     output_dir.mkdir(parents=True, exist_ok=True)
     date_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
