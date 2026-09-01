@@ -13,8 +13,14 @@
      Playwright（ヘッドレスChromium）でレンダリングして取得する（**best-effort**。
      後述の注意点を参照）
    - `base_ec.py`: 設定した BASE ショップの商品（既定では販売中・完売の両方）を収集
-   - Yahoo/BASEは特定のCSSクラス名ではなく、商品ページURLのパターン（`find_item_candidates`,
-     `src/scrapers/base_scraper.py`）を手がかりに抽出するため、テーマ変更に強い
+   - `vintage_shops.py`: BASE以外の独立系ヴィンテージ古着店（BerBerJin, mushroom,
+     SAFARI, ACORN 等）を収集。ショップごとにプラットフォームが異なるため
+     `config.yaml`の`strategy`で切り替え可能（`link_pattern`=商品URLパターン抽出、
+     `generic_card`=画像+価格の汎用抽出、`shopify_json`=Shopify公開APIを直接叩く）。
+     「完売専用ページ」を`force_sold: true`で指定すればそのまま成約データとして扱える
+   - Yahoo/BASE/vintage_shopsは特定のCSSクラス名ではなく、商品ページURLのパターン
+     （`find_item_candidates`, `src/scrapers/base_scraper.py`）を手がかりに抽出する
+     ため、テーマ変更に強い
    - `keywords` に加えて `watch_brands` の各ブランド名×「古着」も自動で検索対象に
      追加され（`collect.py`の`_build_search_keywords`）、レギュラー古着・ビンテージ
      古着を問わず網羅的に収集する

@@ -15,7 +15,7 @@ from pathlib import Path
 from typing import Any
 
 from src.pipeline.normalize import MarketItem, dedupe, load_manual_csv, save_jsonl
-from src.scrapers import base_ec, mercari, yahoo_auction
+from src.scrapers import base_ec, mercari, vintage_shops, yahoo_auction
 from src.scrapers.base_scraper import ScraperError
 
 logger = logging.getLogger(__name__)
@@ -84,6 +84,18 @@ def collect_all(config: dict[str, Any], project_root: Path) -> list[MarketItem]:
             logger.info("base_ec: collected %d items", len(base_items))
         except ScraperError as exc:
             logger.warning("base_ec: skipped — %s", exc)
+
+    vintage_shops_cfg = sources_cfg.get("vintage_shops", {})
+    if vintage_shops_cfg.get("enabled") and vintage_shops_cfg.get("shops"):
+        try:
+            shop_items = vintage_shops.scrape(
+                shops=vintage_shops_cfg["shops"],
+                request_interval_sec=vintage_shops_cfg.get("request_interval_sec", 2.5),
+            )
+            items.extend(shop_items)
+            logger.info("vintage_shops: collected %d items", len(shop_items))
+        except ScraperError as exc:
+            logger.warning("vintage_shops: skipped — %s", exc)
 
     # Manual fallback / supplement — always loaded regardless of scraper outcomes.
     manual_dir = project_root / config.get("manual_data_dir", "data/manual")

@@ -130,15 +130,7 @@ def find_item_candidates(
             continue
         seen_hrefs.add(href)
 
-        container: Tag = a
-        for _ in range(max_ancestor_levels):
-            parent = container.parent
-            if isinstance(parent, Tag):
-                container = parent
-            else:
-                break
-
-        container_text = container.get_text(" ", strip=True)
+        container_text = _ancestor_text(a, max_ancestor_levels)
 
         title = None
         img = a.find("img")
@@ -154,6 +146,65 @@ def find_item_candidates(
                 "href": href,
                 "title": title or None,
                 "price": extract_price(container_text),
+                "container_text": container_text,
+            }
+        )
+
+    return candidates
+
+
+def _ancestor_text(tag: Tag, max_ancestor_levels: int) -> str:
+    """Walk up from `tag`, collecting text from the smallest ancestor that
+    plausibly represents "this one item's card" — stopping *before*
+    climbing into any ancestor that contains more than one ``<a href>``,
+    since that means we've reached a shared list/grid wrapper and would
+    otherwise bleed a neighboring item's price/title into this one.
+    """
+    container: Tag = tag
+    for _ in range(max_ancestor_levels):
+        parent = container.parent
+        if not isinstance(parent, Tag):
+            break
+        if len(parent.find_all("a", href=True)) > 1:
+            break
+        container = parent
+    return container.get_text(" ", strip=True)
+
+
+def find_product_card_candidates(
+    soup: BeautifulSoup,
+    max_ancestor_levels: int = 4,
+    require_price: bool = True,
+) -> list[dict[str, Any]]:
+    """Looser variant of `find_item_candidates` for shops whose product-page
+    URL scheme isn't confidently known: instead of filtering by URL
+    fragment, treat any ``<a>`` wrapping an ``<img alt="...">`` with a price
+    nearby as a product card. Requiring a price by default filters out
+    navigation/logo links that happen to wrap an image.
+    """
+    seen_hrefs: set[str] = set()
+    candidates: list[dict[str, Any]] = []
+
+    for a in soup.find_all("a", href=True):
+        href = a["href"]
+        if href in seen_hrefs:
+            continue
+        img = a.find("img")
+        alt = img.get("alt", "").strip() if img else ""
+        if not alt:
+            continue
+
+        container_text = _ancestor_text(a, max_ancestor_levels)
+        price = extract_price(container_text)
+        if require_price and price is None:
+            continue
+
+        seen_hrefs.add(href)
+        candidates.append(
+            {
+                "href": href,
+                "title": alt,
+                "price": price,
                 "container_text": container_text,
             }
         )

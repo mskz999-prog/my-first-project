@@ -55,6 +55,46 @@ sources:
     # true : 完売商品のみに絞る
     sold_out_only: false
 
+  vintage_shops:
+    enabled: true
+    request_interval_sec: 2.5
+    # 独立系ヴィンテージ古着店（BASE以外の独自EC）。プラットフォームごとに
+    # strategy を切り替える:
+    #   link_pattern : 商品ページURLのパターンが分かっている場合（既定）
+    #   generic_card : URLパターンが未確認の場合、画像リンク＋近傍の価格で拾う
+    #   shopify_json : Shopify製ショップは公開 /products.json を直接叩く（最も確実）
+    # force_sold: true の list_urls は「完売専用ページ」なので中身は全て売約済み扱い。
+    shops:
+      - name: "berberjin"
+        strategy: "link_pattern"
+        item_url_fragment: "/view/item/"
+        max_pages: 5
+        list_urls:
+          - url: "https://webstore.berberjin.com/view/category/sold?sort=price"
+            force_sold: true
+
+      - name: "mushroom"
+        strategy: "generic_card"
+        # 商品ページURLの形式が未確認のため画像+価格の汎用抽出を使用。
+        # cbid=1809250 は「SOLDOUT」カテゴリ（要: 定期的な妥当性確認）。
+        max_pages: 10
+        list_urls:
+          - url: "https://vintage-mushroom.net/?mode=cate&cbid=1809250&csid=0&sort=p"
+            force_sold: true
+
+      - name: "safari"
+        strategy: "link_pattern"
+        item_url_fragment: "/products/detail/"
+        max_pages: 10
+        list_urls:
+          - url: "https://e-safari.co.jp/products/list"
+            force_sold: false   # 一覧ページは販売中・完売が混在する想定
+
+      - name: "acorn"
+        strategy: "shopify_json"
+        base_url: "https://acorn-onlinestore.com"
+        max_pages: 10
+
   sns_hashtags:
     enabled: false
     # Instagram は公式Graph APIがビジネスアカウント連携必須かつ機能制限が大きいため、
