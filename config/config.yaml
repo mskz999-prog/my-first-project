@@ -32,7 +32,9 @@ watch_brands:
 sources:
   yahoo_auction:
     enabled: true
-    # https://auctions.yahoo.co.jp/closedsearch/closedsearch/<keyword>/0 を使用
+    # https://auctions.yahoo.co.jp/closedsearch/closedsearch/<keyword>/0 を使用。
+    # 2ページ目以降は ?b=<開始位置> 方式を試みる（未確認・実験的。失敗しても1ページ目
+    # の結果はそのまま使われる＝悪化はしない）。
     max_pages_per_keyword: 3          # 1ページ ~50件。控えめな既定値。
     request_interval_sec: 2.5         # 相手サーバー負荷を抑えるための最小間隔
 
@@ -46,8 +48,10 @@ sources:
     status: "sold_out"                # 成約済みのみ対象
 
   base_ec:
-    enabled: true
-    # 監視したいBASEショップの公開URLを列挙する（各ショップの利用規約を確認の上、設定すること）
+    # shop_urls がまだプレースホルダーのため既定で無効化。監視したい実在の
+    # BASEショップができたら enabled: true にして shop_urls を差し替えること
+    # （各ショップの利用規約を確認の上で設定）。
+    enabled: false
     shop_urls:
       - "https://example-vintage-shop.thebase.in/"
     request_interval_sec: 2.0

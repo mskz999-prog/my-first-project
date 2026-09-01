@@ -37,6 +37,18 @@ jobs:
       - name: Install Playwright Chromium (for Mercari scraping)
         run: playwright install --with-deps chromium
 
+      - name: Collect market data
+        id: collect
+        run: |
+          RAW_PATH=$(python -m src.main collect | tail -1)
+          echo "raw_path=$RAW_PATH" >> "$GITHUB_OUTPUT"
+
+      # Fetched here, right before the report-generation API call, rather
+      # than before data collection: collection (esp. Mercari's headless
+      # browser + the vintage shop scrapers) can take several minutes, and
+      # GitHub's OIDC identity tokens expire in ~5 minutes — fetching it
+      # earlier caused report generation to fail with a WorkloadIdentityError
+      # (jwt_expired) once collection grew past that window.
       - name: Get Anthropic Workload Identity token
         uses: actions/github-script@v7
         with:
@@ -45,8 +57,8 @@ jobs:
             core.setSecret(token);
             core.exportVariable('ANTHROPIC_IDENTITY_TOKEN', token);
 
-      - name: Run pipeline (collect + generate report)
-        run: python -m src.main run
+      - name: Generate report from collected data
+        run: python -m src.main report --input "${{ steps.collect.outputs.raw_path }}"
 
       - name: Commit generated report
         run: |

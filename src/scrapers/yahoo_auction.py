@@ -1,7 +1,7 @@
 """Yahoo!オークション closedsearch scraper.
 
 Uses the public "落札相場" (closed / completed listings) search page:
-    https://auctions.yahoo.co.jp/closedsearch/closedsearch/<keyword>/<page*50>
+    https://auctions.yahoo.co.jp/closedsearch/closedsearch/<keyword>/0
 
 This page is server-rendered HTML, viewable without login (it's the same
 page used by public price-research sites such as aucfan), so it is scraped
@@ -12,6 +12,14 @@ than by CSS class names — Yahoo's generated class names carry hashed
 suffixes that churn on every frontend deploy, while the auction item URL
 scheme has stayed stable for years. See
 `src.scrapers.base_scraper.find_item_candidates`.
+
+Pagination: the first page is confirmed at `.../<keyword>/0`. Appending a
+raw offset as an extra path segment (`.../<keyword>/50`) 404s — that was
+never actually a working pagination scheme, just an untested guess.
+Page 2+ instead tries `?b=<1-indexed start>` (the classic Yahoo Auctions
+"begin at" convention), which is unconfirmed too; if it also 404s, the
+per-keyword scrape simply stops there (same degrade-to-page-1 behavior as
+before), it does not raise.
 """
 from __future__ import annotations
 
@@ -25,14 +33,16 @@ from src.scrapers.base_scraper import RateLimitedSession, ScraperError, find_ite
 
 logger = logging.getLogger(__name__)
 
-BASE_URL = "https://auctions.yahoo.co.jp/closedsearch/closedsearch/{keyword}/{offset}"
+BASE_URL = "https://auctions.yahoo.co.jp/closedsearch/closedsearch/{keyword}/0"
 ITEM_URL_FRAGMENT = "/jp/auction/"
 
 
 def _build_url(keyword: str, page: int) -> str:
     encoded = urllib.parse.quote(keyword, safe="")
-    offset = page * 50
-    return BASE_URL.format(keyword=encoded, offset=offset)
+    base = BASE_URL.format(keyword=encoded)
+    if page <= 0:
+        return base
+    return f"{base}?b={page * 50 + 1}"
 
 
 def _parse_page(html: str) -> list[MarketItem]:

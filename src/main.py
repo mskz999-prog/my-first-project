@@ -36,8 +36,12 @@ def load_config() -> dict:
 
 def cmd_collect(_args: argparse.Namespace) -> None:
     config = load_config()
-    items = collect_all(config, PROJECT_ROOT)
-    logger.info("Collected %d normalized items (saved under data/raw/).", len(items))
+    items, saved_path = collect_all(config, PROJECT_ROOT)
+    logger.info("Collected %d normalized items.", len(items))
+    # Printed on its own to stdout (separate from the logging output above,
+    # which goes through the logging formatter) so a caller/CI step can
+    # capture just the path, e.g. `LATEST=$(python -m src.main collect | tail -1)`.
+    print(saved_path)
 
 
 def cmd_report(args: argparse.Namespace) -> None:
@@ -48,7 +52,7 @@ def cmd_report(args: argparse.Namespace) -> None:
             logger.error("No items found in %s", args.input)
             sys.exit(1)
     else:
-        items = collect_all(config, PROJECT_ROOT)
+        items, _saved_path = collect_all(config, PROJECT_ROOT)
 
     if not items:
         logger.error(

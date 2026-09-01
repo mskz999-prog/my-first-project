@@ -38,7 +38,8 @@ def _build_search_keywords(config: dict[str, Any]) -> list[str]:
     return keywords
 
 
-def collect_all(config: dict[str, Any], project_root: Path) -> list[MarketItem]:
+def collect_all(config: dict[str, Any], project_root: Path) -> tuple[list[MarketItem], Path]:
+    """Collect from every enabled source and return (items, saved_jsonl_path)."""
     items: list[MarketItem] = []
     sources_cfg = config.get("sources", {})
     search_keywords = _build_search_keywords(config)
@@ -114,6 +115,7 @@ def collect_all(config: dict[str, Any], project_root: Path) -> list[MarketItem]:
 
     raw_dir = project_root / "data" / "raw"
     timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-    save_jsonl(deduped, raw_dir / f"collected_{timestamp}.jsonl")
+    saved_path = raw_dir / f"collected_{timestamp}.jsonl"
+    save_jsonl(deduped, saved_path)
 
-    return deduped
+    return deduped, saved_path
