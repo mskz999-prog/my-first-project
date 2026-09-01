@@ -26,7 +26,7 @@ from __future__ import annotations
 import logging
 import urllib.parse
 
-from bs4 import BeautifulSoup, Tag
+from bs4 import BeautifulSoup
 
 from src.pipeline.normalize import MarketItem
 from src.scrapers.base_scraper import RateLimitedSession, ScraperError, find_item_candidates
@@ -50,22 +50,6 @@ def _parse_page(html: str) -> list[MarketItem]:
     items: list[MarketItem] = []
 
     candidates = find_item_candidates(soup, ITEM_URL_FRAGMENT)
-
-    # TEMPORARY DEBUG (round 2): the container_text-based sampling from the
-    # last debug pass came back essentially always empty (''), even after
-    # fixing the ancestor climb to tolerate duplicate same-item hrefs —
-    # meaning climbing still stops almost immediately, for a reason that
-    # guessing from extracted text alone hasn't revealed. Dump the actual
-    # raw HTML around one real item link instead, so the real structure is
-    # visible directly rather than inferred.
-    raw_anchor = soup.find("a", href=lambda h: bool(h) and ITEM_URL_FRAGMENT in h)
-    if raw_anchor:
-        ancestor: Tag = raw_anchor
-        for _ in range(5):
-            parent = ancestor.parent
-            if isinstance(parent, Tag):
-                ancestor = parent
-        logger.info("yahoo_auction: raw markup sample: %s", str(ancestor)[:3000])
 
     for candidate in candidates:
         if not candidate["title"]:

@@ -141,7 +141,7 @@ def find_item_candidates(
             continue
         seen_hrefs.add(href)
 
-        container_text = _ancestor_text(a, max_ancestor_levels)
+        container_text = _ancestor_text(a, max_ancestor_levels, href_substring=href_substring)
 
         title = None
         img = a.find("img")
@@ -164,31 +164,50 @@ def find_item_candidates(
     return candidates
 
 
-def _ancestor_text(tag: Tag, max_ancestor_levels: int) -> str:
+def _ancestor_text(tag: Tag, max_ancestor_levels: int, href_substring: Optional[str] = None) -> str:
     """Walk up from `tag`, collecting text from the smallest ancestor that
     plausibly represents "this one item's card" — stopping *before*
     climbing into any ancestor that contains links to more than one
-    *distinct* URL, since that means we've reached a shared list/grid
+    *distinct item*, since that means we've reached a shared list/grid
     wrapper and would otherwise bleed a neighboring item's price/title
     into this one.
 
-    Counting distinct hrefs (not raw <a> tags) matters: a single product
-    card commonly has two links pointing at the very same item page (an
-    image link and a separate title link) — counting raw tags stopped the
-    climb at that very first level on real-world markup (confirmed on
-    Yahoo Auctions listings) before ever reaching a price sitting in a
-    sibling element, making price extraction fail almost universally.
+    "Distinct item" is judged only among hrefs matching `href_substring`
+    (the same item-page URL fragment the caller searched for) when one is
+    given — not every href in the ancestor. Real card markup (confirmed on
+    Yahoo Auctions) commonly nests category/breadcrumb links (e.g. "チャン
+    ピオン", "パンツ、スラックス" — each pointing at a *different* search-
+    results URL) right alongside the title, image, and price for the very
+    same single item. Counting those as competing items stopped the climb
+    one level too early, before ever reaching the price, and made price
+    extraction fail almost universally. When no href_substring is given
+    (the generic_card strategy has no fixed pattern to check against),
+    this falls back to counting every href, same as before.
     """
     container: Tag = tag
     for _ in range(max_ancestor_levels):
         parent = container.parent
         if not isinstance(parent, Tag):
             break
-        distinct_hrefs = {a["href"] for a in parent.find_all("a", href=True)}
-        if len(distinct_hrefs) > 1:
+        hrefs = (a["href"] for a in parent.find_all("a", href=True))
+        if href_substring is not None:
+            hrefs = (h for h in hrefs if href_substring in h)
+        if len(set(hrefs)) > 1:
             break
         container = parent
-    return container.get_text(" ", strip=True)
+
+    # Some sites (confirmed on Mercari) put the price only in an
+    # aria-label attribute for screen readers (e.g. a thumbnail <div
+    # aria-label="...売り切れ 19,000円 US$124.83">) with no matching
+    # visible text node anywhere nearby — get_text() alone can never see
+    # it, no matter how far the climb goes, since it never renders as
+    # actual text content. Fold in every aria-label found within the
+    # container so extract_price still has something to match against.
+    aria_labels = " ".join(
+        el["aria-label"] for el in container.find_all(attrs={"aria-label": True})
+    )
+    visible_text = container.get_text(" ", strip=True)
+    return f"{visible_text} {aria_labels}".strip()
 
 
 def find_product_card_candidates(
