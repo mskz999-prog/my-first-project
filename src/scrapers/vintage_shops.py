@@ -27,6 +27,7 @@ skipped — it does not abort collection from the other shops or sources.
 from __future__ import annotations
 
 import logging
+import time
 import urllib.parse
 from typing import Any
 
@@ -41,6 +42,54 @@ from src.scrapers.base_scraper import (
 )
 
 logger = logging.getLogger(__name__)
+
+_BROWSER_USER_AGENT = (
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+    "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+)
+
+
+class _PlaywrightResponse:
+    """Duck-types the one requests.Response attribute _scrape_html_shop
+    reads (.text), so it can share that function's loop unmodified."""
+
+    def __init__(self, text: str) -> None:
+        self.text = text
+
+
+class _PlaywrightSession:
+    """Duck-types RateLimitedSession.get() but renders each page with a
+    real (headless) browser first, for shops whose price only appears
+    after client-side JS runs. Confirmed necessary for berberjin: its
+    static HTML shows a literal "¥0" placeholder that JS replaces with
+    the real price, so a plain requests.get() can never see it — same
+    root problem as Mercari, see mercari.py's module docstring.
+
+    Keeps one browser/page alive across all `.get()` calls for a shop
+    (opening a fresh browser per page would be far slower); call
+    `.close()` once done.
+    """
+
+    def __init__(self, interval_sec: float = 2.5) -> None:
+        from playwright.sync_api import sync_playwright  # deferred: optional dependency
+
+        self._playwright = sync_playwright().start()
+        self._browser = self._playwright.chromium.launch(headless=True)
+        self._page = self._browser.new_page(user_agent=_BROWSER_USER_AGENT)
+        self.interval_sec = interval_sec
+        self._last_request_ts = 0.0
+
+    def get(self, url: str) -> _PlaywrightResponse:
+        elapsed = time.monotonic() - self._last_request_ts
+        if elapsed < self.interval_sec:
+            time.sleep(self.interval_sec - elapsed)
+        self._page.goto(url, wait_until="networkidle", timeout=30000)
+        self._last_request_ts = time.monotonic()
+        return _PlaywrightResponse(self._page.content())
+
+    def close(self) -> None:
+        self._browser.close()
+        self._playwright.stop()
 
 SOLD_OUT_KEYWORDS = ("SOLD OUT", "sold out", "Sold Out", "SOLDOUT", "売り切れ", "完売")
 
@@ -58,7 +107,7 @@ def _paginate_url(url: str, page: int) -> str:
     return urllib.parse.urlunsplit(parsed._replace(query=urllib.parse.urlencode(query, doseq=True)))
 
 
-def _scrape_html_shop(shop_cfg: dict[str, Any], session: RateLimitedSession) -> list[MarketItem]:
+def _scrape_html_shop(shop_cfg: dict[str, Any], session: RateLimitedSession | "_PlaywrightSession") -> list[MarketItem]:
     shop_name = shop_cfg["name"]
     strategy = shop_cfg.get("strategy", "link_pattern")
     item_url_fragment = shop_cfg.get("item_url_fragment")
@@ -95,21 +144,6 @@ def _scrape_html_shop(shop_cfg: dict[str, Any], session: RateLimitedSession) -> 
                     url_base,
                 )
                 break
-
-            # TEMPORARY DEBUG: a prior run showed suspiciously high prices
-            # for berberjin/acorn items (e.g. 90s Champion reverse weave
-            # averaging six figures in yen). Log the first candidate's raw
-            # surrounding text so we can confirm in the Actions log whether
-            # extract_price is picking up the actual selling price or
-            # something else nearby (a reference/MSRP price, a SKU, etc).
-            first = candidates[0]
-            logger.info(
-                "%s: sample candidate title=%r price=%r container_text=%r",
-                shop_name,
-                first["title"][:60],
-                first["price"],
-                first["container_text"][:200],
-            )
 
             for c in candidates:
                 if not c["title"]:
@@ -149,20 +183,6 @@ def _scrape_shopify_shop(shop_cfg: dict[str, Any], session: RateLimitedSession) 
         if not products:
             break
 
-        if page == 1:
-            # TEMPORARY DEBUG: log the raw variant price strings for the
-            # first couple of products, unmodified, to confirm the store's
-            # actual currency/scale (Shopify's /products.json price field
-            # is a decimal-major-unit string, but doesn't say what
-            # currency it's denominated in).
-            for sample in products[:2]:
-                logger.info(
-                    "%s: sample product title=%r raw_variant_prices=%r",
-                    shop_name,
-                    sample.get("title", "")[:60],
-                    [v.get("price") for v in sample.get("variants", [])],
-                )
-
         for product in products:
             title = product.get("title")
             variants = product.get("variants", [])
@@ -188,19 +208,28 @@ def _scrape_shopify_shop(shop_cfg: dict[str, Any], session: RateLimitedSession) 
 
 def scrape(shops: list[dict[str, Any]], request_interval_sec: float = 2.5) -> list[MarketItem]:
     session = RateLimitedSession(interval_sec=request_interval_sec)
+    playwright_session: "_PlaywrightSession | None" = None
     all_items: list[MarketItem] = []
 
-    for shop_cfg in shops:
-        shop_name = shop_cfg.get("name", "unknown")
-        try:
-            if shop_cfg.get("strategy") == "shopify_json":
-                shop_items = _scrape_shopify_shop(shop_cfg, session)
-            else:
-                shop_items = _scrape_html_shop(shop_cfg, session)
-            all_items.extend(shop_items)
-            logger.info("%s: collected %d items", shop_name, len(shop_items))
-        except Exception as exc:  # noqa: BLE001
-            logger.warning("%s: skipped due to error: %s", shop_name, exc)
+    try:
+        for shop_cfg in shops:
+            shop_name = shop_cfg.get("name", "unknown")
+            try:
+                if shop_cfg.get("strategy") == "shopify_json":
+                    shop_items = _scrape_shopify_shop(shop_cfg, session)
+                elif shop_cfg.get("render") == "playwright":
+                    if playwright_session is None:
+                        playwright_session = _PlaywrightSession(interval_sec=request_interval_sec)
+                    shop_items = _scrape_html_shop(shop_cfg, playwright_session)
+                else:
+                    shop_items = _scrape_html_shop(shop_cfg, session)
+                all_items.extend(shop_items)
+                logger.info("%s: collected %d items", shop_name, len(shop_items))
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("%s: skipped due to error: %s", shop_name, exc)
+    finally:
+        if playwright_session is not None:
+            playwright_session.close()
 
     if not all_items:
         raise ScraperError("vintage_shops: no items collected from any configured shop")

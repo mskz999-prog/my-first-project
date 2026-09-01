@@ -64,6 +64,29 @@ def test_find_item_candidates_base_like_markup_with_soldout():
     assert "SOLD OUT" in candidates[0]["container_text"]
 
 
+def test_find_item_candidates_climbs_past_duplicate_hrefs_to_reach_price():
+    # Real-world Yahoo Auctions markup: a thumbnail link AND a separate
+    # title link both point at the same item, with the price sitting in a
+    # sibling element two levels up. Confirmed via production logs that
+    # naively stopping the ancestor climb at "more than one <a> tag"
+    # (rather than more than one *distinct* href) caused this to return
+    # price=None for nearly every Yahoo item.
+    html = """
+    <li class="Product">
+      <a href="/jp/auction/x123"><img alt=""></a>
+      <div class="info">
+        <a href="/jp/auction/x123">Champion リバースウィーブ 90s</a>
+        <span>送料無料</span>
+        <span>8,500円</span>
+      </div>
+    </li>
+    """
+    soup = BeautifulSoup(html, "lxml")
+    candidates = find_item_candidates(soup, "/jp/auction/")
+    assert len(candidates) == 1
+    assert candidates[0]["price"] == 8500
+
+
 def test_find_item_candidates_dedupes_repeated_links():
     html = """
     <a href="/item/m1"><img alt="A"><span>1,000円</span></a>

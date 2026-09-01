@@ -167,16 +167,25 @@ def find_item_candidates(
 def _ancestor_text(tag: Tag, max_ancestor_levels: int) -> str:
     """Walk up from `tag`, collecting text from the smallest ancestor that
     plausibly represents "this one item's card" — stopping *before*
-    climbing into any ancestor that contains more than one ``<a href>``,
-    since that means we've reached a shared list/grid wrapper and would
-    otherwise bleed a neighboring item's price/title into this one.
+    climbing into any ancestor that contains links to more than one
+    *distinct* URL, since that means we've reached a shared list/grid
+    wrapper and would otherwise bleed a neighboring item's price/title
+    into this one.
+
+    Counting distinct hrefs (not raw <a> tags) matters: a single product
+    card commonly has two links pointing at the very same item page (an
+    image link and a separate title link) — counting raw tags stopped the
+    climb at that very first level on real-world markup (confirmed on
+    Yahoo Auctions listings) before ever reaching a price sitting in a
+    sibling element, making price extraction fail almost universally.
     """
     container: Tag = tag
     for _ in range(max_ancestor_levels):
         parent = container.parent
         if not isinstance(parent, Tag):
             break
-        if len(parent.find_all("a", href=True)) > 1:
+        distinct_hrefs = {a["href"] for a in parent.find_all("a", href=True)}
+        if len(distinct_hrefs) > 1:
             break
         container = parent
     return container.get_text(" ", strip=True)

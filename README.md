@@ -17,7 +17,10 @@
      SAFARI, ACORN 等）を収集。ショップごとにプラットフォームが異なるため
      `config.yaml`の`strategy`で切り替え可能（`link_pattern`=商品URLパターン抽出、
      `generic_card`=画像+価格の汎用抽出、`shopify_json`=Shopify公開APIを直接叩く）。
-     「完売専用ページ」を`force_sold: true`で指定すればそのまま成約データとして扱える
+     「完売専用ページ」を`force_sold: true`で指定すればそのまま成約データとして扱える。
+     価格がJSで後から書き換わる（静的HTMLでは"¥0"のプレースホルダーのまま）サイトは
+     `render: "playwright"`でMercariと同様ヘッドレスブラウザ経由に切り替えられる
+     （berberjinで実際にこの挙動を確認済み）
    - Yahoo/BASE/vintage_shopsは特定のCSSクラス名ではなく、商品ページURLのパターン
      （`find_item_candidates`, `src/scrapers/base_scraper.py`）を手がかりに抽出する
      ため、テーマ変更に強い

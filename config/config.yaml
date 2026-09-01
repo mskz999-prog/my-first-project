@@ -68,10 +68,13 @@ sources:
     #   generic_card : URLパターンが未確認の場合、画像リンク＋近傍の価格で拾う
     #   shopify_json : Shopify製ショップは公開 /products.json を直接叩く（最も確実）
     # force_sold: true の list_urls は「完売専用ページ」なので中身は全て売約済み扱い。
+    # render: "playwright" は、価格がJSで後から書き換わる（静的HTMLでは"¥0"の
+    # プレースホルダーのまま）サイト向け。berberjinで実際に確認済み。
     shops:
       - name: "berberjin"
         strategy: "link_pattern"
         item_url_fragment: "/view/item/"
+        render: "playwright"
         max_pages: 5
         list_urls:
           - url: "https://webstore.berberjin.com/view/category/sold?sort=price"
@@ -81,6 +84,8 @@ sources:
         strategy: "generic_card"
         # 商品ページURLの形式が未確認のため画像+価格の汎用抽出を使用。
         # cbid=1809250 は「SOLDOUT」カテゴリ（要: 定期的な妥当性確認）。
+        # berberjinと同じ理由でrender: playwrightを試す（JS遅延反映の可能性）。
+        render: "playwright"
         max_pages: 10
         list_urls:
           - url: "https://vintage-mushroom.net/?mode=cate&cbid=1809250&csid=0&sort=p"
