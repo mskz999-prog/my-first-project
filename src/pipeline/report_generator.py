@@ -94,16 +94,34 @@ def build_user_message(
     return "\n".join(parts)
 
 
+def _has_wif_credentials() -> bool:
+    """Workload Identity Federation env vars the Anthropic SDK auto-detects
+    (see .github/workflows/weekly_report.yml, which sets all four)."""
+    required = (
+        "ANTHROPIC_FEDERATION_RULE_ID",
+        "ANTHROPIC_ORGANIZATION_ID",
+        "ANTHROPIC_SERVICE_ACCOUNT_ID",
+    )
+    has_identity_token = bool(
+        os.environ.get("ANTHROPIC_IDENTITY_TOKEN")
+        or os.environ.get("ANTHROPIC_IDENTITY_TOKEN_FILE")
+    )
+    return has_identity_token and all(os.environ.get(v) for v in required)
+
+
 def generate_report(
     items: list[MarketItem],
     config: dict[str, Any],
     project_root: Path,
 ) -> Path:
     api_key = os.environ.get("ANTHROPIC_API_KEY")
-    if not api_key:
+    if not api_key and not _has_wif_credentials():
         raise RuntimeError(
-            "ANTHROPIC_API_KEY is not set. Copy .env.example to .env and fill it "
-            "in, or set it as a repo/Actions secret."
+            "No Anthropic credentials found. Either set ANTHROPIC_API_KEY "
+            "(copy .env.example to .env locally, or an Actions secret) or "
+            "configure Workload Identity Federation (ANTHROPIC_ORGANIZATION_ID, "
+            "ANTHROPIC_SERVICE_ACCOUNT_ID, ANTHROPIC_FEDERATION_RULE_ID, and "
+            "ANTHROPIC_IDENTITY_TOKEN[_FILE])."
         )
 
     report_cfg = config.get("report", {})
@@ -116,7 +134,7 @@ def generate_report(
     system_prompt = _load_system_prompt()
     user_message = build_user_message(items, hashtags, config)
 
-    client = anthropic.Anthropic(api_key=api_key)
+    client = anthropic.Anthropic(api_key=api_key) if api_key else anthropic.Anthropic()
     logger.info("Calling Claude (%s) to generate report from %d items", model, len(items))
     response = client.messages.create(
         model=model,

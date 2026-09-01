@@ -8,11 +8,20 @@ on:
 
 permissions:
   contents: write
+  id-token: write
 
 jobs:
   generate-report:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    env:
+      # Not secrets: these identifiers only let the workflow request a
+      # short-lived token, and the federation rule restricts who can use
+      # them to workflows running in this exact repository. See
+      # https://platform.claude.com/settings/workload-identity
+      ANTHROPIC_ORGANIZATION_ID: b58a22af-1b3d-4618-97c5-a5e514e97aca
+      ANTHROPIC_SERVICE_ACCOUNT_ID: svac_014wB1aWSe2jeb7vmuQCQET8
+      ANTHROPIC_FEDERATION_RULE_ID: fdrl_017cGBTmq4w44wnZUU7dgkgT
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -25,9 +34,15 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
+      - name: Get Anthropic Workload Identity token
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const token = await core.getIDToken('https://api.anthropic.com');
+            core.setSecret(token);
+            core.exportVariable('ANTHROPIC_IDENTITY_TOKEN', token);
+
       - name: Run pipeline (collect + generate report)
-        env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: python -m src.main run
 
       - name: Commit generated report

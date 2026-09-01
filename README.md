@@ -30,8 +30,16 @@ pip install -r requirements.txt
 cp .env.example .env   # ANTHROPIC_API_KEY を設定
 ```
 
-GitHub Actionsで動かす場合は、リポジトリの Settings → Secrets and variables → Actions で
-`ANTHROPIC_API_KEY` を登録してください。
+GitHub Actionsでの認証は2通りあります。
+
+- **Workload Identity Federation（推奨・現在の設定）**: 長期固定のAPIキーをGitHub Secretsに
+  置かず、GitHub ActionsのOIDCトークンから都度10分の短命トークンを発行して認証する方式。
+  `.github/workflows/weekly_report.yml` はこの方式で構成済みです（Anthropic Console側の
+  「ワークロードアイデンティティ」で発行者・ルール・サービスアカウントを作成し、そのIDを
+  ワークフローの `env:` に設定してあります）。追加のSecrets登録は不要です。
+- **APIキー（ローカル実行 / 代替手段）**: `.env` に `ANTHROPIC_API_KEY` を設定してローカルで
+  実行する場合や、WIFを使わずシンプルにActions Secretsで運用したい場合はこちらでも動作します
+  （`report_generator.py` は `ANTHROPIC_API_KEY` があればそちらを優先します）。
 
 ## 使い方
 
