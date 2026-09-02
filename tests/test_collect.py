@@ -238,6 +238,47 @@ def test_fill_missing_tags_recognizes_double_name():
     assert "60s" in items[0].tags
 
 
+def test_fill_missing_tags_strips_authenticity_tags_from_kensaku_keyword_dumps():
+    # The dominant real-world contamination source, confirmed by comparing
+    # two live runs: sellers append a "(検)" search-term block listing
+    # every plausible keyword regardless of whether it describes this
+    # specific item — none of that block is a genuine attribute claim.
+    items = [
+        MarketItem(
+            source="yahoo_auction",
+            title="Levi's 501 デニムパンツ (検)66前期 66後期 ビッグE 赤耳 501XX",
+            price=3200,
+            brand="Levi's",
+        ),
+    ]
+    _fill_missing_tags(items)
+    assert items[0].tags == []
+
+
+def test_fill_missing_tags_strips_authenticity_tags_when_mutually_exclusive_tags_co_occur():
+    # No explicit "検)" marker this time, but a title claiming to be BOTH
+    # 66前期 and 66後期 (or 3+ different decades) can't be describing one
+    # real garment — this structural check catches keyword-stuffed titles
+    # the marker-word list alone would miss.
+    items = [
+        MarketItem(source="mercari", title="Levi's 501 66前期 66後期 デニムパンツ", price=4000, brand="Levi's"),
+        MarketItem(source="mercari", title="Levi's 501 40s 60s 80s いろいろな年代取り扱い中", price=3500, brand="Levi's"),
+    ]
+    _fill_missing_tags(items)
+    assert items[0].tags == []
+    assert items[1].tags == []
+
+
+def test_fill_missing_tags_keeps_a_single_genuine_era_claim():
+    # Sanity check against over-suppression: a title with exactly one
+    # decade tag and no stuffing/reproduction/bundle signal should still
+    # confirm normally.
+    items = [MarketItem(source="yahoo_auction", title="Levi's 501 60s 赤耳 実物確認済み", price=480000, brand="Levi's")]
+    _fill_missing_tags(items)
+    assert "60s" in items[0].tags
+    assert "赤耳" in items[0].tags
+
+
 def test_brand_focused_filtering_narrows_catalog_to_one_brand():
     # collect_all(brands=[...]) touches the network, so this exercises the
     # same filtering logic it applies directly against the real catalog:

@@ -166,6 +166,37 @@ _REPRODUCTION_INDICATOR_KEYWORDS = ("復刻", "リプロダクション", "リ�
 # excluded from authenticity tagging the same way reproductions are.
 _BUNDLE_INDICATOR_KEYWORDS = ("まとめ売り", "まとめて", "セット販売", "本セット", "点セット", "福袋")
 
+# The single biggest real contamination source, confirmed by comparing two
+# consecutive Levi's-focused runs: Yahoo/Mercari sellers routinely append a
+# "検)" (検索用 = "for search") block listing every plausible search term a
+# buyer might type — "Levi's 501 (検)66前期 66後期 ビッグE 赤耳 501XX" —
+# regardless of which, if any, actually describe the item. Stripping the
+# reproduction/bundle cases alone barely moved the 60s/50s/501XX medians
+# (still ¥3,700-698,000 spreads reported by the LLM itself as suspicious),
+# because most of the contamination is this SEO-keyword-list pattern, not
+# reproductions or lots.
+_KEYWORD_STUFFING_INDICATOR_KEYWORDS = ("検)", "(検", "検索用", "関連キーワード", "検索ワード")
+
+# A genuine garment has exactly one era and one tag/rivet generation — a
+# title matching two members of the same group at once (e.g. both "66前期"
+# and "66後期", or three+ different decades) isn't describing one item's
+# real attributes, it's almost certainly the keyword-list pattern above
+# even without an explicit "検)" marker. This is a structural consistency
+# check, independent of wording, so it catches stuffed titles the marker
+# list above doesn't.
+_MUTUALLY_EXCLUSIVE_TAG_GROUPS = (
+    frozenset({"40s", "50s", "60s", "70s", "80s", "90s", "00s"}),
+    frozenset({"66前期", "66後期"}),
+    frozenset({"ビッグE", "スモールe"}),
+)
+
+
+def _looks_like_keyword_stuffing(title_lower: str, matched_tags: list[str]) -> bool:
+    if any(kw in title_lower for kw in _KEYWORD_STUFFING_INDICATOR_KEYWORDS):
+        return True
+    matched_set = set(matched_tags)
+    return any(len(matched_set & group) >= 2 for group in _MUTUALLY_EXCLUSIVE_TAG_GROUPS)
+
 
 # Qualifiers that mean a nearby keyword match is describing what the item
 # is *not*, or only resembles — "501xxではない" (not a 501XX), "赤耳風"
@@ -230,11 +261,13 @@ def _fill_missing_tags(items: list[MarketItem]) -> None:
     — a seller can misdescribe an item (honestly or not) and the tag will
     still apply. _era_tag_context_disqualifies filters the most common
     local false-positive pattern (negation/comparison wording immediately
-    next to the keyword); reproduction lines and multi-item lots are a
-    second, title-wide pattern (see _AUTHENTICITY_TAGS above) that strips
-    the authenticity-implying tags even when the keyword match itself was
-    clean — a title can say "1966モデル 501" with zero negation wording
-    while still being a brand-new LVC reissue, not a real 1966 pair.
+    next to the keyword); reproduction lines, multi-item lots, and
+    keyword-stuffed "検)" search-term blocks are title-wide patterns (see
+    _AUTHENTICITY_TAGS above) that strip the authenticity-implying tags
+    even when the keyword match itself was clean — a title can say
+    "1966モデル 501" with zero negation wording while still being a
+    brand-new LVC reissue, and "(検)66前期 66後期 ビッグE 赤耳" is a
+    search-term dump, not a description of one real attribute.
     report_generator's prompt carries the remaining residual risk ("this
     is seller-claimed, not verified") through to the report text.
     """
@@ -250,6 +283,7 @@ def _fill_missing_tags(items: list[MarketItem]) -> None:
         if matched and (
             any(kw in title_lower for kw in _REPRODUCTION_INDICATOR_KEYWORDS)
             or any(kw in title_lower for kw in _BUNDLE_INDICATOR_KEYWORDS)
+            or _looks_like_keyword_stuffing(title_lower, matched)
         ):
             matched = [tag for tag in matched if tag not in _AUTHENTICITY_TAGS]
         if matched:
