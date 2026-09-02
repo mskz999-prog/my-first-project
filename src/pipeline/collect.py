@@ -29,6 +29,21 @@ from src.scrapers.base_scraper import ScraperError
 
 logger = logging.getLogger(__name__)
 
+# One or two brands per brand_catalog.yaml tier, picked to exercise every
+# code path a full run does (a plain-English match, a katakana-alias-only
+# match, a skate-tier addition) without sweeping the whole ~450-combo
+# catalog. Used by collect_all(quick=True) for fast local iteration on
+# catalog/scraper changes — see the --quick CLI flag in src/main.py.
+QUICK_SAMPLE_BRANDS = [
+    "Champion", "Levi's", "Patagonia",  # regular
+    "Sears", "Buzz Rickson's",          # vintage-specialty (Sears: alias-only match)
+    "Supreme", "Santa Cruz",            # streetwear / skate
+    "Marmot",                           # outdoor
+    "EDWIN",                            # denim-japan
+    "Starter",                          # sports-license
+    "Disney",                           # licensed-print
+]
+
 
 def _build_search_keywords(
     config: dict[str, Any],
@@ -182,12 +197,29 @@ def _fill_missing_model(items: list[MarketItem], model_index: dict[str, list[str
                 break
 
 
-def collect_all(config: dict[str, Any], project_root: Path) -> tuple[list[MarketItem], Path]:
-    """Collect from every enabled source and return (items, saved_jsonl_path)."""
+def collect_all(
+    config: dict[str, Any], project_root: Path, quick: bool = False
+) -> tuple[list[MarketItem], Path]:
+    """Collect from every enabled source and return (items, saved_jsonl_path).
+
+    `quick=True` restricts config/brand_catalog.yaml to QUICK_SAMPLE_BRANDS
+    (item_keywords stays in full — it's already small, ~50 standalone
+    keywords, and is exactly what "アイテムベースのワードでだけ回す" wants
+    exercised) so a full collect+report cycle finishes in well under an
+    hour instead of several, for iterating on catalog/scraper changes
+    without waiting for the full ~450-combo sweep every time.
+    """
     items: list[MarketItem] = []
     sources_cfg = config.get("sources", {})
     catalog = load_brand_catalog()
     item_keywords = load_item_keywords()
+    if quick:
+        catalog = [e for e in catalog if e.get("brand") in QUICK_SAMPLE_BRANDS]
+        logger.info(
+            "collect_all: quick mode — catalog restricted to %d/%d representative brands",
+            len(catalog),
+            len(QUICK_SAMPLE_BRANDS),
+        )
     search_keywords = _build_search_keywords(config, catalog, item_keywords)
     logger.info(
         "collect_all: %d total search keywords (%d brand_catalog.yaml entries, "

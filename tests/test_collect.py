@@ -3,7 +3,9 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+from src.pipeline.catalog import catalog_brand_names, load_brand_catalog
 from src.pipeline.collect import (
+    QUICK_SAMPLE_BRANDS,
     _build_search_keywords,
     _fill_missing_brands,
     _fill_missing_category,
@@ -86,6 +88,31 @@ def test_build_search_keywords_adds_item_keyword_terms():
     keywords = _build_search_keywords(config, None, item_keywords)
     assert "ネルシャツ" in keywords
     assert "フライトジャケット" in keywords
+
+
+def test_quick_sample_brands_all_exist_in_the_real_catalog():
+    # collect_all(quick=True) filters the real catalog down to just
+    # QUICK_SAMPLE_BRANDS — a regression guard against that list drifting
+    # out of sync with brand_catalog.yaml (e.g. a renamed/removed brand),
+    # which would silently shrink quick mode's coverage to nothing.
+    brands = set(catalog_brand_names(load_brand_catalog()))
+    missing = [b for b in QUICK_SAMPLE_BRANDS if b not in brands]
+    assert missing == []
+
+
+def test_quick_mode_catalog_filter_shrinks_keyword_count():
+    # collect_all itself touches the network, so this exercises the same
+    # filtering logic it applies (`brand in QUICK_SAMPLE_BRANDS`) directly
+    # against the real catalog, confirming quick mode is actually smaller.
+    config = {"keywords": ["古着"], "watch_brands": []}
+    full_catalog = load_brand_catalog()
+    quick_catalog = [e for e in full_catalog if e.get("brand") in QUICK_SAMPLE_BRANDS]
+
+    full_keywords = _build_search_keywords(config, full_catalog)
+    quick_keywords = _build_search_keywords(config, quick_catalog)
+
+    assert len(quick_catalog) == len(QUICK_SAMPLE_BRANDS)
+    assert len(quick_keywords) < len(full_keywords) / 4
 
 
 def test_fill_missing_model_only_matches_within_the_items_own_brand():

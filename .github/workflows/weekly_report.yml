@@ -4,7 +4,18 @@ on:
   schedule:
     # Every Monday 09:00 JST = 00:00 UTC Monday.
     - cron: "0 0 * * 1"
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      quick_test:
+        description: >-
+          Quick test run: restrict config/brand_catalog.yaml to a small
+          representative brand sample (item_keywords stays in full) so the
+          whole run finishes in well under an hour, for trying out
+          brand_catalog.yaml edits without waiting for the full ~450-combo
+          sweep. Output goes to a *-quick-test.md file, never overwriting
+          the real weekly report.
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -45,8 +56,10 @@ jobs:
 
       - name: Collect market data
         id: collect
+        env:
+          QUICK_FLAG: ${{ github.event.inputs.quick_test == 'true' && '--quick' || '' }}
         run: |
-          RAW_PATH=$(python -m src.main collect | tail -1)
+          RAW_PATH=$(python -m src.main collect $QUICK_FLAG | tail -1)
           echo "raw_path=$RAW_PATH" >> "$GITHUB_OUTPUT"
 
       # Fetched here, right before the report-generation API call, rather
@@ -64,9 +77,13 @@ jobs:
             core.exportVariable('ANTHROPIC_IDENTITY_TOKEN', token);
 
       - name: Generate report from collected data
-        run: python -m src.main report --input "${{ steps.collect.outputs.raw_path }}"
+        env:
+          QUICK_FLAG: ${{ github.event.inputs.quick_test == 'true' && '--quick' || '' }}
+        run: python -m src.main report --input "${{ steps.collect.outputs.raw_path }}" $QUICK_FLAG
 
       - name: Commit generated report
+        env:
+          QUICK_FLAG: ${{ github.event.inputs.quick_test == 'true' && '--quick' || '' }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -74,7 +91,12 @@ jobs:
           if git diff --cached --quiet; then
             echo "No changes to commit."
           else
-            git commit -m "chore: weekly vintage resale report $(date -u +%Y-%m-%d)"
+            if [ -n "$QUICK_FLAG" ]; then
+              MSG="chore: quick-test vintage resale report $(date -u +%Y-%m-%d)"
+            else
+              MSG="chore: weekly vintage resale report $(date -u +%Y-%m-%d)"
+            fi
+            git commit -m "$MSG"
             git push
           fi
 

@@ -237,6 +237,7 @@ def generate_report(
     items: list[MarketItem],
     config: dict[str, Any],
     project_root: Path,
+    quick: bool = False,
 ) -> Path:
     api_key = os.environ.get("ANTHROPIC_API_KEY")
     if not api_key and not _has_wif_credentials():
@@ -307,7 +308,10 @@ def generate_report(
     output_dir = project_root / report_cfg.get("output_dir", "data/reports")
     output_dir.mkdir(parents=True, exist_ok=True)
     date_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-    output_path = output_dir / f"{date_str}_vintage-resale-report.md"
+    # Quick-test runs (see collect.QUICK_SAMPLE_BRANDS) get their own
+    # filename so they never silently clobber a same-day production report.
+    suffix = "-quick-test" if quick else ""
+    output_path = output_dir / f"{date_str}_vintage-resale-report{suffix}.md"
     output_path.write_text(report_markdown, encoding="utf-8")
 
     logger.info("Report written to %s", output_path)
