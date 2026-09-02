@@ -512,6 +512,19 @@ def collect_all(
     _fill_missing_model(deduped, build_model_index(catalog))
     _fill_missing_category(deduped)
     _fill_missing_tags(deduped)
+
+    # TEMPORARY DEBUG: dump the real titles behind the rarest decade tags
+    # (40s/50s/60s) to check for residual false-positive patterns beyond
+    # what _looks_like_keyword_stuffing already catches — e.g. a 60s-tagged
+    # median far below the real-world price a genuine 1960s 501 commands.
+    # Remove once diagnosed.
+    for i in deduped:
+        if any(t in ("40s", "50s", "60s") for t in i.tags):
+            logger.info(
+                "ERA_TAG_DEBUG: tags=%s price=%s source=%s title=%r",
+                i.tags, i.price, i.source, i.title,
+            )
+
     brand_tagged = sum(1 for i in deduped if i.brand)
     model_tagged = sum(1 for i in deduped if i.model)
     category_tagged = sum(1 for i in deduped if i.category)
