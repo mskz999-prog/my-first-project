@@ -308,7 +308,7 @@ def generate_report(
     output_dir = project_root / report_cfg.get("output_dir", "data/reports")
     output_dir.mkdir(parents=True, exist_ok=True)
     date_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-    # Quick-test runs (see collect.QUICK_SAMPLE_BRANDS) get their own
+    # Quick-test runs (see collect.QUICK_SAMPLE_TIERS) get their own
     # filename so they never silently clobber a same-day production report.
     suffix = "-quick-test" if quick else ""
     output_path = output_dir / f"{date_str}_vintage-resale-report{suffix}.md"

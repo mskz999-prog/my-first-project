@@ -29,20 +29,15 @@ from src.scrapers.base_scraper import ScraperError
 
 logger = logging.getLogger(__name__)
 
-# One or two brands per brand_catalog.yaml tier, picked to exercise every
-# code path a full run does (a plain-English match, a katakana-alias-only
-# match, a skate-tier addition) without sweeping the whole ~450-combo
-# catalog. Used by collect_all(quick=True) for fast local iteration on
-# catalog/scraper changes — see the --quick CLI flag in src/main.py.
-QUICK_SAMPLE_BRANDS = [
-    "Champion", "Levi's", "Patagonia",  # regular
-    "Sears", "Buzz Rickson's",          # vintage-specialty (Sears: alias-only match)
-    "Supreme", "Santa Cruz",            # streetwear / skate
-    "Marmot",                           # outdoor
-    "EDWIN",                            # denim-japan
-    "Starter",                          # sports-license
-    "Disney",                           # licensed-print
-]
+# brand_catalog.yaml tier(s) swept in quick mode: just the "regular" tier
+# (定番レギュラー — Champion, Levi's, Patagonia, Nike, etc., ~50 brands)
+# instead of the full catalog's ~260 brands across all 7 tiers. Combined
+# with item_keywords (kept in full — see collect_all), this is the
+# "定番レギュラー + アイテムベース" sample requested for fast iteration on
+# brand_catalog.yaml/scraper changes — see the --quick CLI flag in
+# src/main.py. Tier-based rather than a fixed brand list so it stays in
+# sync automatically as brands are added to/removed from that tier.
+QUICK_SAMPLE_TIERS = {"regular"}
 
 
 def _build_search_keywords(
@@ -202,23 +197,25 @@ def collect_all(
 ) -> tuple[list[MarketItem], Path]:
     """Collect from every enabled source and return (items, saved_jsonl_path).
 
-    `quick=True` restricts config/brand_catalog.yaml to QUICK_SAMPLE_BRANDS
-    (item_keywords stays in full — it's already small, ~50 standalone
-    keywords, and is exactly what "アイテムベースのワードでだけ回す" wants
-    exercised) so a full collect+report cycle finishes in well under an
-    hour instead of several, for iterating on catalog/scraper changes
-    without waiting for the full ~450-combo sweep every time.
+    `quick=True` restricts config/brand_catalog.yaml to QUICK_SAMPLE_TIERS
+    (just "regular"/定番レギュラー) while keeping item_keywords in full —
+    the "定番レギュラー + アイテムベース" sample — so a full collect+report
+    cycle finishes in well under an hour instead of several, for iterating
+    on catalog/scraper changes without waiting for the full ~450-combo,
+    7-tier sweep every time.
     """
     items: list[MarketItem] = []
     sources_cfg = config.get("sources", {})
     catalog = load_brand_catalog()
     item_keywords = load_item_keywords()
     if quick:
-        catalog = [e for e in catalog if e.get("brand") in QUICK_SAMPLE_BRANDS]
+        full_count = len(catalog)
+        catalog = [e for e in catalog if e.get("tier") in QUICK_SAMPLE_TIERS]
         logger.info(
-            "collect_all: quick mode — catalog restricted to %d/%d representative brands",
+            "collect_all: quick mode — catalog restricted to %d/%d brands (tiers: %s)",
             len(catalog),
-            len(QUICK_SAMPLE_BRANDS),
+            full_count,
+            ", ".join(sorted(QUICK_SAMPLE_TIERS)),
         )
     search_keywords = _build_search_keywords(config, catalog, item_keywords)
     logger.info(

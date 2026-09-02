@@ -79,7 +79,7 @@ def main() -> None:
     quick_help = (
         "Restrict config/brand_catalog.yaml to a small representative brand "
         "sample (item_keywords stays in full) for a fast end-to-end test run "
-        "— minutes instead of hours. See collect.QUICK_SAMPLE_BRANDS."
+        "— minutes instead of hours. See collect.QUICK_SAMPLE_TIERS."
     )
 
     p_collect = subparsers.add_parser("collect", help="Collect market data only")
