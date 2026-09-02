@@ -3,7 +3,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from src.pipeline.catalog import load_brand_catalog
+from src.pipeline.catalog import catalog_keywords, load_brand_catalog
 from src.pipeline.collect import (
     QUICK_SAMPLE_TIERS,
     _build_search_keywords,
@@ -184,3 +184,20 @@ def test_fill_missing_tags_confirms_when_a_second_clean_occurrence_exists():
     ]
     _fill_missing_tags(items)
     assert "赤耳" in items[0].tags
+
+
+def test_brand_focused_filtering_narrows_catalog_to_one_brand():
+    # collect_all(brands=[...]) touches the network, so this exercises the
+    # same filtering logic it applies directly against the real catalog:
+    # only Levi's entries survive, and the resulting keyword set is just
+    # Levi's brand+model combos and aliases (no config.yaml keywords, no
+    # item_keywords) — a focused run for e.g. checking era-tag accuracy.
+    catalog = load_brand_catalog()
+    focused = [e for e in catalog if e.get("brand", "").lower() in {"levi's"}]
+
+    assert len(focused) == 1
+    assert focused[0]["brand"] == "Levi's"
+
+    keywords = catalog_keywords(focused)
+    assert all(k.startswith("Levi's") or k in focused[0].get("aliases", []) for k in keywords)
+    assert "Levi's 501" in keywords

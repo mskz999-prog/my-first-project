@@ -13,9 +13,19 @@ on:
           whole run finishes in well under an hour, for trying out
           brand_catalog.yaml edits without waiting for the full ~450-combo
           sweep. Output goes to a *-quick-test.md file, never overwriting
-          the real weekly report.
+          the real weekly report. Ignored when `brands` is set.
         type: boolean
         default: false
+      brands:
+        description: >-
+          Optional: comma-separated exact brand_catalog.yaml brand name(s),
+          e.g. "Levi's" or "Levi's,Wrangler". Narrows the whole run to just
+          that brand's catalog combos/aliases (overrides quick_test) — for
+          a fast, focused test of one brand (e.g. checking era/variant tag
+          accuracy against real listings). Output goes to a
+          *-focus-<brand>.md file.
+        type: string
+        default: ""
 
 permissions:
   contents: write
@@ -57,9 +67,13 @@ jobs:
       - name: Collect market data
         id: collect
         env:
-          QUICK_FLAG: ${{ github.event.inputs.quick_test == 'true' && '--quick' || '' }}
+          QUICK: ${{ github.event.inputs.quick_test == 'true' && '1' || '' }}
+          BRANDS: ${{ github.event.inputs.brands }}
         run: |
-          RAW_PATH=$(python -m src.main collect $QUICK_FLAG | tail -1)
+          ARGS=()
+          if [ -n "$QUICK" ]; then ARGS+=(--quick); fi
+          if [ -n "$BRANDS" ]; then ARGS+=(--brands "$BRANDS"); fi
+          RAW_PATH=$(python -m src.main collect "${ARGS[@]}" | tail -1)
           echo "raw_path=$RAW_PATH" >> "$GITHUB_OUTPUT"
 
       # Fetched here, right before the report-generation API call, rather
@@ -78,12 +92,18 @@ jobs:
 
       - name: Generate report from collected data
         env:
-          QUICK_FLAG: ${{ github.event.inputs.quick_test == 'true' && '--quick' || '' }}
-        run: python -m src.main report --input "${{ steps.collect.outputs.raw_path }}" $QUICK_FLAG
+          QUICK: ${{ github.event.inputs.quick_test == 'true' && '1' || '' }}
+          BRANDS: ${{ github.event.inputs.brands }}
+        run: |
+          ARGS=(--input "${{ steps.collect.outputs.raw_path }}")
+          if [ -n "$QUICK" ]; then ARGS+=(--quick); fi
+          if [ -n "$BRANDS" ]; then ARGS+=(--brands "$BRANDS"); fi
+          python -m src.main report "${ARGS[@]}"
 
       - name: Commit generated report
         env:
-          QUICK_FLAG: ${{ github.event.inputs.quick_test == 'true' && '--quick' || '' }}
+          QUICK: ${{ github.event.inputs.quick_test == 'true' && '1' || '' }}
+          BRANDS: ${{ github.event.inputs.brands }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -91,7 +111,9 @@ jobs:
           if git diff --cached --quiet; then
             echo "No changes to commit."
           else
-            if [ -n "$QUICK_FLAG" ]; then
+            if [ -n "$BRANDS" ]; then
+              MSG="chore: brand-focused ($BRANDS) vintage resale report $(date -u +%Y-%m-%d)"
+            elif [ -n "$QUICK" ]; then
               MSG="chore: quick-test vintage resale report $(date -u +%Y-%m-%d)"
             else
               MSG="chore: weekly vintage resale report $(date -u +%Y-%m-%d)"

@@ -308,7 +308,10 @@ def _fill_missing_model(items: list[MarketItem], model_index: dict[str, list[str
 
 
 def collect_all(
-    config: dict[str, Any], project_root: Path, quick: bool = False
+    config: dict[str, Any],
+    project_root: Path,
+    quick: bool = False,
+    brands: list[str] | None = None,
 ) -> tuple[list[MarketItem], Path]:
     """Collect from every enabled source and return (items, saved_jsonl_path).
 
@@ -318,27 +321,47 @@ def collect_all(
     cycle finishes in well under an hour instead of several, for iterating
     on catalog/scraper changes without waiting for the full ~450-combo,
     7-tier sweep every time.
+
+    `brands` (a list of exact brand_catalog.yaml brand names, e.g.
+    ["Levi's"]) narrows further and differently: an ad-hoc single/few-brand
+    test run, e.g. to check era/variant tagging accuracy against real
+    listings for one brand without the noise or runtime of everything
+    else. When set, this *replaces* the whole keyword set with just that
+    brand's catalog combos + aliases (no config.yaml keywords/watch_brands,
+    no item_keywords) — takes priority over `quick`, since the point is a
+    narrow, fast, directly-inspectable run.
     """
     items: list[MarketItem] = []
     sources_cfg = config.get("sources", {})
     catalog = load_brand_catalog()
     item_keywords = load_item_keywords()
-    if quick:
-        full_count = len(catalog)
-        catalog = [e for e in catalog if e.get("tier") in QUICK_SAMPLE_TIERS]
+    if brands:
+        wanted = {b.lower() for b in brands}
+        catalog = [e for e in catalog if e.get("brand", "").lower() in wanted]
+        search_keywords = catalog_keywords(catalog)
         logger.info(
-            "collect_all: quick mode — catalog restricted to %d/%d brands (tiers: %s)",
+            "collect_all: brand-focused mode — %s -> %d catalog entries, %d keywords",
+            brands,
             len(catalog),
-            full_count,
-            ", ".join(sorted(QUICK_SAMPLE_TIERS)),
+            len(search_keywords),
         )
-    search_keywords = _build_search_keywords(config, catalog, item_keywords)
+    else:
+        if quick:
+            full_count = len(catalog)
+            catalog = [e for e in catalog if e.get("tier") in QUICK_SAMPLE_TIERS]
+            logger.info(
+                "collect_all: quick mode — catalog restricted to %d/%d brands (tiers: %s)",
+                len(catalog),
+                full_count,
+                ", ".join(sorted(QUICK_SAMPLE_TIERS)),
+            )
+        search_keywords = _build_search_keywords(config, catalog, item_keywords)
     logger.info(
         "collect_all: %d total search keywords (%d brand_catalog.yaml entries, "
         "%d item_keywords entries)",
         len(search_keywords),
         len(catalog),
-        len(item_keywords),
+        len(item_keywords) if not brands else 0,
     )
 
     yahoo_cfg = sources_cfg.get("yahoo_auction", {})

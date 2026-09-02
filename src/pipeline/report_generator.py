@@ -272,6 +272,7 @@ def generate_report(
     config: dict[str, Any],
     project_root: Path,
     quick: bool = False,
+    focus_brands: list[str] | None = None,
 ) -> Path:
     api_key = os.environ.get("ANTHROPIC_API_KEY")
     if not api_key and not _has_wif_credentials():
@@ -342,9 +343,16 @@ def generate_report(
     output_dir = project_root / report_cfg.get("output_dir", "data/reports")
     output_dir.mkdir(parents=True, exist_ok=True)
     date_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-    # Quick-test runs (see collect.QUICK_SAMPLE_TIERS) get their own
-    # filename so they never silently clobber a same-day production report.
-    suffix = "-quick-test" if quick else ""
+    # Quick-test and brand-focused runs (see collect.QUICK_SAMPLE_TIERS /
+    # collect_all's `brands` param) get their own filename so they never
+    # silently clobber a same-day production report.
+    if focus_brands:
+        slug = "-".join(b.lower().replace("'", "").replace(" ", "-") for b in focus_brands)
+        suffix = f"-focus-{slug}"
+    elif quick:
+        suffix = "-quick-test"
+    else:
+        suffix = ""
     output_path = output_dir / f"{date_str}_vintage-resale-report{suffix}.md"
     output_path.write_text(report_markdown, encoding="utf-8")
 
