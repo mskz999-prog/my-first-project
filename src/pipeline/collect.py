@@ -135,6 +135,51 @@ ERA_TAG_KEYWORDS: dict[str, tuple[str, ...]] = {
 }
 
 
+# Qualifiers that mean a nearby keyword match is describing what the item
+# is *not*, or only resembles — "501xxではない" (not a 501XX), "赤耳風"
+# (red-selvedge-*ish*), "フェイクビッグE" (fake Big E). These era tags
+# carry huge price implications (a genuine ビッグE can be worth 10-100x an
+# ordinary one), so a plain substring match without this check would
+# regularly mislabel comparison/disclaimer text as a confirmed attribute.
+# Suffix qualifiers (checked just after a match) vs. prefix qualifiers
+# (checked just before) reflect where each actually appears in Japanese —
+# "風"/"っぽい" trail the noun, "偽"/"フェイク" lead it.
+_TAG_DISQUALIFYING_SUFFIXES = (
+    "ではない", "じゃない", "でない", "ではありません", "風", "っぽい",
+    "みたい", "タイプ", "レプリカ", "コピー", "もどき",
+)
+_TAG_DISQUALIFYING_PREFIXES = ("偽", "フェイク", "ニセ", "非")
+_TAG_CONTEXT_WINDOW = 8
+
+
+def _era_tag_context_disqualifies(title_lower: str, match_start: int, match_end: int) -> bool:
+    after = title_lower[match_end : match_end + _TAG_CONTEXT_WINDOW]
+    before = title_lower[max(0, match_start - _TAG_CONTEXT_WINDOW) : match_start]
+    if any(q in after for q in _TAG_DISQUALIFYING_SUFFIXES):
+        return True
+    if any(q in before for q in _TAG_DISQUALIFYING_PREFIXES):
+        return True
+    return False
+
+
+def _title_confirms_era_tag(title_lower: str, keywords: tuple[str, ...]) -> bool:
+    """True if any occurrence of any of `keywords` in the title isn't
+    immediately disqualified by a negation/comparison word nearby. A
+    keyword can appear more than once (or under more than one alias) —
+    only one clean, unqualified occurrence is needed to confirm the tag.
+    """
+    for kw in keywords:
+        start = 0
+        while True:
+            idx = title_lower.find(kw, start)
+            if idx == -1:
+                break
+            if not _era_tag_context_disqualifies(title_lower, idx, idx + len(kw)):
+                return True
+            start = idx + 1
+    return False
+
+
 def _fill_missing_tags(items: list[MarketItem]) -> None:
     """Best-effort era/variant descriptor tagging (see ERA_TAG_KEYWORDS) —
     a finer layer than _fill_missing_model, since e.g. all of "Levi's 501",
@@ -147,6 +192,14 @@ def _fill_missing_tags(items: list[MarketItem]) -> None:
     the first hit. Skips items that already have manual tags — a manual
     CSV row's tags are curated by hand and trusted as-is, not merged with
     inferred ones.
+
+    This is still title-text pattern matching, not verified authentication
+    — a seller can misdescribe an item (honestly or not) and the tag will
+    still apply. _era_tag_context_disqualifies filters the most common
+    false-positive pattern (negation/comparison wording immediately next
+    to the keyword), but report_generator's prompt is what carries the
+    remaining "this is seller-claimed, not verified" caveat through to
+    the report text.
     """
     for item in items:
         if item.tags:
@@ -155,7 +208,7 @@ def _fill_missing_tags(items: list[MarketItem]) -> None:
         matched = [
             tag
             for tag, keywords in ERA_TAG_KEYWORDS.items()
-            if any(kw in title_lower for kw in keywords)
+            if _title_confirms_era_tag(title_lower, keywords)
         ]
         if matched:
             item.tags = matched

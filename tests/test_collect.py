@@ -152,3 +152,35 @@ def test_fill_missing_tags_does_not_overwrite_manual_tags():
     items = [MarketItem(source="manual", title="Levi's 501 赤耳", price=50000, tags=["curated-tag"])]
     _fill_missing_tags(items)
     assert items[0].tags == ["curated-tag"]
+
+
+def test_fill_missing_tags_ignores_negated_or_comparison_wording():
+    # The exact false-positive pattern flagged as a real concern: a title
+    # that mentions a rare tag only to say the item ISN'T that, or merely
+    # resembles it, should not get the tag — these terms carry a 10-100x
+    # price difference, so a naive substring match would badly mislead the
+    # aggregated top_variants stats.
+    items = [
+        MarketItem(source="mercari", title="Levi's 501 501xxではない普通のデニム", price=6000, brand="Levi's"),
+        MarketItem(source="mercari", title="Levi's 501 赤耳風の色落ち加工", price=4000, brand="Levi's"),
+        MarketItem(source="mercari", title="フェイクビッグE 501 レプリカ品", price=3000, brand="Levi's"),
+        MarketItem(source="mercari", title="本物の501xx 赤耳 ビッグE デニム", price=250000, brand="Levi's"),
+    ]
+    _fill_missing_tags(items)
+
+    assert items[0].tags == []
+    assert items[1].tags == []
+    assert items[2].tags == []
+    assert set(items[3].tags) == {"501XX", "赤耳", "ビッグE"}
+
+
+def test_fill_missing_tags_confirms_when_a_second_clean_occurrence_exists():
+    # One occurrence is disqualified ("赤耳ではない") but a second, clean
+    # occurrence of the same keyword elsewhere in the title should still
+    # confirm the tag — sellers sometimes repeat a term in both a comparison
+    # and a genuine description.
+    items = [
+        MarketItem(source="mercari", title="赤耳ではないと思ったら実は赤耳でした 501", price=90000, brand="Levi's"),
+    ]
+    _fill_missing_tags(items)
+    assert "赤耳" in items[0].tags
