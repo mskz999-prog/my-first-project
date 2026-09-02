@@ -186,6 +186,58 @@ def test_fill_missing_tags_confirms_when_a_second_clean_occurrence_exists():
     assert "赤耳" in items[0].tags
 
 
+def test_fill_missing_tags_strips_authenticity_tags_from_reproduction_lines():
+    # The exact case flagged as real-world noise: Levi's official reissue
+    # lines (LVC etc.) put the historical era straight in the product name
+    # ("1966モデル", i.e. matches "66後期"/"60s"), so the keyword match
+    # itself is clean (no local negation), but the title elsewhere says
+    # 復刻 — the whole product is a modern remake, not a genuine 60s pair,
+    # so the authenticity-implying tags must not survive even though the
+    # local match passed.
+    items = [
+        MarketItem(
+            source="mercari",
+            title="Levi's 501 1966モデル 復刻 リーバイスヴィンテージクロージング 新品",
+            price=32000,
+            brand="Levi's",
+        ),
+    ]
+    _fill_missing_tags(items)
+
+    assert "60s" not in items[0].tags
+    assert "66後期" not in items[0].tags
+    assert "復刻" in items[0].tags  # the reproduction tag itself is legitimate info
+
+
+def test_fill_missing_tags_strips_authenticity_tags_from_bundle_listings():
+    # A lot price ("3本セット") doesn't represent any single garment's
+    # value, so treating it as a genuine 60s-tier price would badly skew
+    # the aggregate the same way a reproduction mislabel would.
+    items = [
+        MarketItem(source="yahoo_auction", title="Levi's 501 60s 70s まとめ売り 3本セット", price=9000, brand="Levi's"),
+    ]
+    _fill_missing_tags(items)
+    assert "60s" not in items[0].tags
+    assert "70s" not in items[0].tags
+
+
+def test_fill_missing_tags_ignores_resemblance_wording_variants():
+    items = [
+        MarketItem(source="mercari", title="Levi's 501 60'sテイストのデニム", price=6000, brand="Levi's"),
+        MarketItem(source="mercari", title="Levi's 501 ビッグEオマージュデザイン", price=5000, brand="Levi's"),
+    ]
+    _fill_missing_tags(items)
+    assert items[0].tags == []
+    assert items[1].tags == []
+
+
+def test_fill_missing_tags_recognizes_double_name():
+    items = [MarketItem(source="mercari", title="Levi's 501 ダブルネーム 60s", price=450000, brand="Levi's")]
+    _fill_missing_tags(items)
+    assert "ダブルネーム" in items[0].tags
+    assert "60s" in items[0].tags
+
+
 def test_brand_focused_filtering_narrows_catalog_to_one_brand():
     # collect_all(brands=[...]) touches the network, so this exercises the
     # same filtering logic it applies directly against the real catalog:

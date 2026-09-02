@@ -110,6 +110,7 @@ GENRE_KEYWORDS: dict[str, tuple[str, ...]] = {
 # at the first.
 ERA_TAG_KEYWORDS: dict[str, tuple[str, ...]] = {
     "501XX": ("501xx",),
+    "ダブルネーム": ("ダブルネーム",),
     "赤耳": ("赤耳", "赤みみ"),
     "黒耳": ("黒耳", "黒みみ"),
     "ビッグE": ("ビッグe", "ビッグイー", "big e"),
@@ -121,18 +122,49 @@ ERA_TAG_KEYWORDS: dict[str, tuple[str, ...]] = {
     "黒カン": ("黒カン", "黒缶"),
     "大戦モデル": ("大戦モデル", "大戦モデル", "wwii"),
     "セルビッジ": ("セルビッジ", "セルヴィッジ", "selvedge", "selvage"),
-    "復刻": ("復刻",),
+    "復刻": ("復刻", "リプロダクション", "リバイバル", "lvc"),
     "デッドストック": ("デッドストック", "dead stock", "新品未使用"),
     "日本製": ("日本製", "made in japan"),
     "アメリカ製": ("アメリカ製", "usa製", "made in usa"),
-    "40s": ("40s", "1940s", "40年代"),
-    "50s": ("50s", "1950s", "50年代"),
-    "60s": ("60s", "1960s", "60年代"),
-    "70s": ("70s", "1970s", "70年代"),
-    "80s": ("80s", "1980s", "80年代"),
-    "90s": ("90s", "1990s", "90年代"),
-    "00s": ("00s", "2000s", "00年代", "ゼロ年代"),
+    "40s": ("40s", "40's", "1940s", "40年代"),
+    "50s": ("50s", "50's", "1950s", "50年代"),
+    "60s": ("60s", "60's", "1960s", "60年代"),
+    "70s": ("70s", "70's", "1970s", "70年代"),
+    "80s": ("80s", "80's", "1980s", "80年代"),
+    "90s": ("90s", "90's", "1990s", "90年代"),
+    "00s": ("00s", "00's", "2000s", "00年代", "ゼロ年代"),
 }
+
+# Tags that assert genuine vintage/original-era authenticity — as opposed
+# to 復刻/デッドストック/日本製/アメリカ製, which describe a real attribute
+# regardless of whether the garment is old or a modern remake. When a title
+# also signals "this is a modern reproduction" (see
+# _REPRODUCTION_INDICATOR_KEYWORDS below), these get stripped even though
+# the era keyword itself matched cleanly — see _fill_missing_tags.
+_AUTHENTICITY_TAGS = frozenset(
+    {
+        "501XX", "ダブルネーム", "赤耳", "黒耳", "ビッグE", "スモールe",
+        "赤タブ", "オレンジタブ", "66前期", "66後期", "黒カン", "大戦モデル",
+        "セルビッジ", "40s", "50s", "60s", "70s", "80s", "90s", "00s",
+    }
+)
+
+# Real-world case that motivated this: Levi's officially sells reissue
+# lines (LVC etc.) using the historical year/era straight in the product
+# name — "1966モデル 501", "1947復刻" — so a title can cleanly match "60s"
+# or "66後期" while being a brand-new, mass-produced remake, not the
+# genuine article the tag implies. This is a title-wide check (unlike
+# _TAG_DISQUALIFYING_SUFFIXES/PREFIXES's local window) since a "復刻"
+# mention anywhere in the title describes the whole product, not just the
+# word next to it.
+_REPRODUCTION_INDICATOR_KEYWORDS = ("復刻", "リプロダクション", "リバイバル", "lvc")
+
+# Multi-item lot/bundle listings ("60〜90s 501 まとめ売り 3本セット") quote
+# one price for several garments of possibly-mixed authenticity and era —
+# treating that price as representative of any single tag it happens to
+# mention (era tags especially) skews the aggregate badly, so these are
+# excluded from authenticity tagging the same way reproductions are.
+_BUNDLE_INDICATOR_KEYWORDS = ("まとめ売り", "まとめて", "セット販売", "本セット", "点セット", "福袋")
 
 
 # Qualifiers that mean a nearby keyword match is describing what the item
@@ -146,7 +178,8 @@ ERA_TAG_KEYWORDS: dict[str, tuple[str, ...]] = {
 # "風"/"っぽい" trail the noun, "偽"/"フェイク" lead it.
 _TAG_DISQUALIFYING_SUFFIXES = (
     "ではない", "じゃない", "でない", "ではありません", "風", "っぽい",
-    "みたい", "タイプ", "レプリカ", "コピー", "もどき",
+    "みたい", "タイプ", "レプリカ", "コピー", "もどき", "テイスト",
+    "インスパイア", "オマージュ", "風合い",
 )
 _TAG_DISQUALIFYING_PREFIXES = ("偽", "フェイク", "ニセ", "非")
 _TAG_CONTEXT_WINDOW = 8
@@ -196,10 +229,14 @@ def _fill_missing_tags(items: list[MarketItem]) -> None:
     This is still title-text pattern matching, not verified authentication
     — a seller can misdescribe an item (honestly or not) and the tag will
     still apply. _era_tag_context_disqualifies filters the most common
-    false-positive pattern (negation/comparison wording immediately next
-    to the keyword), but report_generator's prompt is what carries the
-    remaining "this is seller-claimed, not verified" caveat through to
-    the report text.
+    local false-positive pattern (negation/comparison wording immediately
+    next to the keyword); reproduction lines and multi-item lots are a
+    second, title-wide pattern (see _AUTHENTICITY_TAGS above) that strips
+    the authenticity-implying tags even when the keyword match itself was
+    clean — a title can say "1966モデル 501" with zero negation wording
+    while still being a brand-new LVC reissue, not a real 1966 pair.
+    report_generator's prompt carries the remaining residual risk ("this
+    is seller-claimed, not verified") through to the report text.
     """
     for item in items:
         if item.tags:
@@ -210,6 +247,11 @@ def _fill_missing_tags(items: list[MarketItem]) -> None:
             for tag, keywords in ERA_TAG_KEYWORDS.items()
             if _title_confirms_era_tag(title_lower, keywords)
         ]
+        if matched and (
+            any(kw in title_lower for kw in _REPRODUCTION_INDICATOR_KEYWORDS)
+            or any(kw in title_lower for kw in _BUNDLE_INDICATOR_KEYWORDS)
+        ):
+            matched = [tag for tag in matched if tag not in _AUTHENTICITY_TAGS]
         if matched:
             item.tags = matched
 
