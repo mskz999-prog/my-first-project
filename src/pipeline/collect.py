@@ -307,6 +307,35 @@ def _fill_missing_category(items: list[MarketItem]) -> None:
                 break
 
 
+def _earliest_match(title_lower: str, candidates: list[tuple[str, str]]) -> str | None:
+    """Return the candidate whose lowered text starts earliest in
+    title_lower (ties broken by longer match, then by candidates' order).
+
+    _fill_missing_brands/_fill_missing_model used to just take the first
+    candidate that matched *in configured list order*, regardless of
+    where it actually sat in the title. That produced real mis-tags: a
+    Levi's model list with "501" listed before "70505" tagged a title
+    that only ever mentions "70505" as "501", simply because "501" is a
+    substring of "70505" and happened to come first in brand_catalog.yaml.
+    Worse, a genuine "US ARMY" chino trouser listing that name-drops
+    "LEVI'S 501" purely as a sizing reference (e.g. "サイズ感はLEVI'S501と
+    同等") got tagged brand=Levi's instead of US ARMY, just because Levi's
+    was checked before US ARMY in watch_brands. Picking whichever match
+    actually appears first in the title text fixes both: "70505" appears
+    before "501" in the title, and "US ARMY" appears before "LEVI'S" in
+    the title.
+    """
+    best: tuple[int, int, int, str] | None = None  # (start, -length, order, original)
+    for order, (original, lowered) in enumerate(candidates):
+        idx = title_lower.find(lowered)
+        if idx == -1:
+            continue
+        key = (idx, -len(lowered), order)
+        if best is None or key < (best[0], best[1], best[2]):
+            best = (idx, -len(lowered), order, original)
+    return best[3] if best else None
+
+
 def _fill_missing_brands(
     items: list[MarketItem],
     watch_brands: list[str],
@@ -334,11 +363,15 @@ def _fill_missing_brands(
     the brand in katakana only (e.g. "シアーズ"), which would never match
     the English "Sears" substring check alone. Either way `item.brand` is
     always set to the canonical (English) brand name for consistency.
+
+    When a title mentions more than one candidate brand, the one that
+    appears earliest in the title text wins (see _earliest_match) rather
+    than whichever is listed first in watch_brands.
     """
     if not watch_brands:
         return
-    lowered_brands = [(b, b.lower()) for b in watch_brands]
-    lowered_aliases = [
+    candidates = [(b, b.lower()) for b in watch_brands]
+    candidates += [
         (brand, alias.lower())
         for brand, aliases in (brand_aliases or {}).items()
         for alias in aliases
@@ -347,15 +380,9 @@ def _fill_missing_brands(
         if item.brand:
             continue
         title_lower = item.title.lower()
-        for original, lowered in lowered_brands:
-            if lowered in title_lower:
-                item.brand = original
-                break
-        else:
-            for original, lowered in lowered_aliases:
-                if lowered in title_lower:
-                    item.brand = original
-                    break
+        match = _earliest_match(title_lower, candidates)
+        if match:
+            item.brand = match
 
 
 def _fill_missing_model(items: list[MarketItem], model_index: dict[str, list[str]]) -> None:
@@ -367,6 +394,12 @@ def _fill_missing_model(items: list[MarketItem], model_index: dict[str, list[str
     or Alpha Industries. This is what enables item/model-level trend
     breakdowns (see report_generator._quick_stats' top_models), not just
     brand-level ones.
+
+    When a title mentions more than one of the brand's models (e.g. a
+    "70505" listing that also name-drops "501" among similar/related
+    items), the one that appears earliest in the title text wins (see
+    _earliest_match) rather than whichever is listed first in
+    brand_catalog.yaml.
     """
     if not model_index:
         return
@@ -377,10 +410,10 @@ def _fill_missing_model(items: list[MarketItem], model_index: dict[str, list[str
         if not models:
             continue
         title_lower = item.title.lower()
-        for model in models:
-            if model.lower() in title_lower:
-                item.model = model
-                break
+        candidates = [(model, model.lower()) for model in models]
+        match = _earliest_match(title_lower, candidates)
+        if match:
+            item.model = match
 
 
 def collect_all(

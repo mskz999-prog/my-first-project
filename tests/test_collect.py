@@ -48,6 +48,26 @@ def test_fill_missing_brands_falls_back_to_katakana_alias():
     assert items[1].brand == "Sears"  # plain English match still takes priority
 
 
+def test_fill_missing_brands_prefers_the_brand_that_appears_earliest_in_the_title():
+    # Real-world case found via ERA_TAG_DEBUG logging on a Levi's-focused
+    # run: a genuine "US ARMY" chino trouser listing name-drops "LEVI'S
+    # 501" only as a sizing reference, well after "US ARMY" in the title.
+    # The old code checked watch_brands in configured list order and took
+    # the first hit, so with Levi's listed before US ARMY it always won
+    # regardless of where either name actually sat in the title, mis
+    # tagging military surplus as Levi's and skewing the Levi's trend
+    # numbers with prices that were never really Levi's prices.
+    items = [
+        MarketItem(
+            source="yahoo_auction",
+            title="DEAD STOCK 60s US ARMY コットン チノ ツイル トラウザー / LEVI'S 501 502 505 BigE 66前期",
+            price=7777,
+        ),
+    ]
+    _fill_missing_brands(items, ["Levi's", "US ARMY"])
+    assert items[0].brand == "US ARMY"
+
+
 def test_fill_missing_category_matches_genre_keywords():
     items = [
         MarketItem(source="mercari", title="90s Champion リバースウィーブ スウェット", price=8000),
@@ -129,6 +149,27 @@ def test_fill_missing_model_only_matches_within_the_items_own_brand():
     assert items[0].model == "リバースウィーブ"
     assert items[1].model is None  # no brand tagged, so model matching is skipped
     assert items[2].model == "already-set"  # pre-set value is never overwritten
+
+
+def test_fill_missing_model_prefers_the_model_that_appears_earliest_in_the_title():
+    # Real-world case found via ERA_TAG_DEBUG logging: a listing for a
+    # "70505" mentions a whole list of other Levi's model numbers
+    # (including "501") later in the title as "also similar to these".
+    # The old code checked models in brand_catalog.yaml list order
+    # ("501" is listed before "70505" for Levi's) and took the first
+    # substring hit, so it tagged this a "501" even though "70505" is
+    # both the actual model and appears first in the title text.
+    items = [
+        MarketItem(
+            source="yahoo_auction",
+            title="BigSize 60s リーバイス 70505 BIGE ヴィンテージ(Levi's 506XX 507XX 558 557 501 505 66前期 等)",
+            price=66000,
+            brand="Levi's",
+        ),
+    ]
+    model_index = {"Levi's": ["501", "505", "70505"]}
+    _fill_missing_model(items, model_index)
+    assert items[0].model == "70505"
 
 
 def test_fill_missing_tags_matches_multiple_era_tags_at_once():
