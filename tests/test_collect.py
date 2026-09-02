@@ -10,6 +10,7 @@ from src.pipeline.collect import (
     _fill_missing_brands,
     _fill_missing_category,
     _fill_missing_model,
+    _fill_missing_tags,
 )
 from src.pipeline.normalize import MarketItem
 
@@ -128,3 +129,26 @@ def test_fill_missing_model_only_matches_within_the_items_own_brand():
     assert items[0].model == "リバースウィーブ"
     assert items[1].model is None  # no brand tagged, so model matching is skipped
     assert items[2].model == "already-set"  # pre-set value is never overwritten
+
+
+def test_fill_missing_tags_matches_multiple_era_tags_at_once():
+    # The real-world case that motivated this: a "501" listing is a
+    # completely different item depending on whether it's 赤耳/ビッグE/
+    # 66前期 or none of those — a single flat `model` tag can't capture
+    # that, but several of these tags can legitimately co-occur.
+    items = [
+        MarketItem(source="mercari", title="Levi's 501 赤耳 ビッグE 66前期 デニム", price=180000, brand="Levi's", model="501"),
+        MarketItem(source="yahoo_auction", title="Levi's 501 90年代 アメリカ製", price=8000, brand="Levi's", model="501"),
+        MarketItem(source="mercari", title="ノーブランドのジーンズ", price=3000),
+    ]
+    _fill_missing_tags(items)
+
+    assert set(items[0].tags) == {"赤耳", "ビッグE", "66前期"}
+    assert set(items[1].tags) == {"90s", "アメリカ製"}
+    assert items[2].tags == []
+
+
+def test_fill_missing_tags_does_not_overwrite_manual_tags():
+    items = [MarketItem(source="manual", title="Levi's 501 赤耳", price=50000, tags=["curated-tag"])]
+    _fill_missing_tags(items)
+    assert items[0].tags == ["curated-tag"]

@@ -39,3 +39,21 @@ def test_quick_stats_top_models_breaks_down_by_brand_and_model():
     assert models[("Levi's", "501")]["sold_count"] == 2
     assert models[("Levi's", "501")]["avg_price"] == 10000
     assert models[("Levi's", "505")]["sold_count"] == 1
+
+
+def test_quick_stats_top_variants_breaks_down_by_era_tag_and_counts_multi_tag_items_once_per_tag():
+    items = [
+        # A plain 501 vs. a rare 赤耳+ビッグE 501 — same model, wildly different market.
+        MarketItem(source="yahoo_auction", title="x", price=8000, brand="Levi's", model="501", tags=[]),
+        MarketItem(
+            source="mercari", title="y", price=280000, brand="Levi's", model="501", tags=["赤耳", "ビッグE"]
+        ),
+    ]
+    stats = _quick_stats(items)
+    variants = {(v["brand"], v["model"], v["tag"]): v for v in stats["trend"]["top_variants"]}
+
+    assert variants[("Levi's", "501", "赤耳")]["sold_count"] == 1
+    assert variants[("Levi's", "501", "赤耳")]["avg_price"] == 280000
+    assert variants[("Levi's", "501", "ビッグE")]["avg_price"] == 280000
+    # The untagged item contributes to top_models but not top_variants.
+    assert ("Levi's", "501", "") not in variants

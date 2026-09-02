@@ -98,6 +98,68 @@ GENRE_KEYWORDS: dict[str, tuple[str, ...]] = {
     "キャップ・帽子": ("キャップ", "帽子", "ハット", "cap", "hat"),
 }
 
+# Era/variant descriptor vocabulary — the layer of detail sitting on top
+# of `model` (e.g. Levi's 501) that actually drives vintage-denim pricing:
+# 501xx vs. ビッグE vs. 赤耳 vs. 66前期/後期 vs. 黒カン vs. 90年代アメリカ製
+# are all different things a "501" can be, and a flat model tag alone
+# can't distinguish an item worth 3,000円 from one worth 300,000円 the
+# way these terms can. Sellers routinely put them straight in the title
+# as their own search keywords, so unlike brand/category/model (each item
+# gets one), an item can legitimately carry several of these at once —
+# see _fill_missing_tags, which appends every match instead of stopping
+# at the first.
+ERA_TAG_KEYWORDS: dict[str, tuple[str, ...]] = {
+    "501XX": ("501xx",),
+    "赤耳": ("赤耳", "赤みみ"),
+    "黒耳": ("黒耳", "黒みみ"),
+    "ビッグE": ("ビッグe", "ビッグイー", "big e"),
+    "スモールe": ("スモールe", "small e"),
+    "赤タブ": ("赤タブ",),
+    "オレンジタブ": ("オレンジタブ",),
+    "66前期": ("66前期",),
+    "66後期": ("66後期",),
+    "黒カン": ("黒カン", "黒缶"),
+    "大戦モデル": ("大戦モデル", "大戦モデル", "wwii"),
+    "セルビッジ": ("セルビッジ", "セルヴィッジ", "selvedge", "selvage"),
+    "復刻": ("復刻",),
+    "デッドストック": ("デッドストック", "dead stock", "新品未使用"),
+    "日本製": ("日本製", "made in japan"),
+    "アメリカ製": ("アメリカ製", "usa製", "made in usa"),
+    "40s": ("40s", "1940s", "40年代"),
+    "50s": ("50s", "1950s", "50年代"),
+    "60s": ("60s", "1960s", "60年代"),
+    "70s": ("70s", "1970s", "70年代"),
+    "80s": ("80s", "1980s", "80年代"),
+    "90s": ("90s", "1990s", "90年代"),
+    "00s": ("00s", "2000s", "00年代", "ゼロ年代"),
+}
+
+
+def _fill_missing_tags(items: list[MarketItem]) -> None:
+    """Best-effort era/variant descriptor tagging (see ERA_TAG_KEYWORDS) —
+    a finer layer than _fill_missing_model, since e.g. all of "Levi's 501",
+    "Levi's 501 赤耳 66前期", and "Levi's 501 90年代アメリカ製" share the
+    same `model` but are wildly different items to a vintage buyer.
+
+    Unlike brand/category/model, multiple tags can legitimately apply to
+    one item at once (a single listing can be 赤耳 *and* ビッグE *and*
+    66前期), so every matching keyword is appended rather than stopping at
+    the first hit. Skips items that already have manual tags — a manual
+    CSV row's tags are curated by hand and trusted as-is, not merged with
+    inferred ones.
+    """
+    for item in items:
+        if item.tags:
+            continue
+        title_lower = item.title.lower()
+        matched = [
+            tag
+            for tag, keywords in ERA_TAG_KEYWORDS.items()
+            if any(kw in title_lower for kw in keywords)
+        ]
+        if matched:
+            item.tags = matched
+
 
 def _fill_missing_category(items: list[MarketItem]) -> None:
     """Best-effort genre tagging by matching a keyword dictionary against
@@ -297,17 +359,20 @@ def collect_all(
     _fill_missing_brands(deduped, watch_brands, build_alias_index(catalog))
     _fill_missing_model(deduped, build_model_index(catalog))
     _fill_missing_category(deduped)
+    _fill_missing_tags(deduped)
     brand_tagged = sum(1 for i in deduped if i.brand)
     model_tagged = sum(1 for i in deduped if i.model)
     category_tagged = sum(1 for i in deduped if i.category)
+    era_tagged = sum(1 for i in deduped if i.tags)
     logger.info(
         "collect_all: %d raw -> %d after dedupe (%d have a brand tag, %d have a model tag, "
-        "%d have a category tag)",
+        "%d have a category tag, %d have an era/variant tag)",
         len(items),
         len(deduped),
         brand_tagged,
         model_tagged,
         category_tagged,
+        era_tagged,
     )
 
     raw_dir = project_root / "data" / "raw"

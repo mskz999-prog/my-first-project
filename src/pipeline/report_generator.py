@@ -60,11 +60,18 @@ def _brand_category_model_breakdown(sold: list[MarketItem]) -> dict[str, Any]:
     """Shared aggregation logic for a set of already-filtered sold items —
     used once for trend_stats (recency-bearing sources only) and once for
     reference_benchmark (everything else), so the two never mix.
+
+    Also breaks brand+model down one level further into `top_variants`
+    (brand, model, era/variant tag — e.g. Levi's 501 x 赤耳 vs. Levi's 501
+    x 66前期) using the tags collect._fill_missing_tags attaches. A flat
+    `model` tag alone can't tell a ¥3,000 501 from a ¥300,000 one; the tag
+    dimension is what actually drives vintage-denim pricing.
     """
     brand_prices: dict[str, list[int]] = defaultdict(list)
     category_prices: dict[str, list[int]] = defaultdict(list)
     brand_category_prices: dict[tuple[str, str], list[int]] = defaultdict(list)
     brand_model_prices: dict[tuple[str, str], list[int]] = defaultdict(list)
+    brand_model_tag_prices: dict[tuple[str, str, str], list[int]] = defaultdict(list)
     for i in sold:
         if not i.price:
             continue
@@ -76,6 +83,13 @@ def _brand_category_model_breakdown(sold: list[MarketItem]) -> dict[str, Any]:
             brand_category_prices[(i.brand, i.category)].append(i.price)
         if i.brand and i.model:
             brand_model_prices[(i.brand, i.model)].append(i.price)
+            # A model can carry several era/variant tags at once (e.g. a
+            # "501" listing tagged both 赤耳 and 66前期) — each one is a
+            # meaningfully different sub-market, so each gets its own
+            # (brand, model, tag) bucket rather than collapsing into the
+            # model-level number alone.
+            for tag in i.tags:
+                brand_model_tag_prices[(i.brand, i.model, tag)].append(i.price)
 
     top_brands = [
         {"brand": brand, **_price_block(prices_)}
@@ -97,6 +111,12 @@ def _brand_category_model_breakdown(sold: list[MarketItem]) -> dict[str, Any]:
             brand_model_prices.items(), key=lambda kv: -len(kv[1])
         )[:40]
     ]
+    top_variants = [
+        {"brand": brand, "model": model, "tag": tag, **_price_block(prices_)}
+        for (brand, model, tag), prices_ in sorted(
+            brand_model_tag_prices.items(), key=lambda kv: -len(kv[1])
+        )[:40]
+    ]
 
     return {
         "overall": _price_block([i.price for i in sold if i.price]),
@@ -104,6 +124,7 @@ def _brand_category_model_breakdown(sold: list[MarketItem]) -> dict[str, Any]:
         "top_categories": top_categories,
         "brand_category_breakdown": brand_category_breakdown,
         "top_models": top_models,
+        "top_variants": top_variants,
     }
 
 
@@ -204,7 +225,12 @@ def build_user_message(
         "サブセクションで扱うこと。特定の1店舗が母数の大半を占める場合は、その店舗固有の傾向"
         "（高単価帯に強い店等）である可能性も明記すること。"
         "`trend.top_models`（ブランド×モデル/型番単位の件数・価格統計）はアイテムレベルの"
-        "トレンド分析にそのまま使ってよい。",
+        "トレンド分析にそのまま使ってよい。さらに`trend.top_variants`（ブランド×モデル×"
+        "era/variantタグ単位。タグは501XX/赤耳/ビッグE/66前期/66後期/黒カン/セルビッジ/"
+        "デッドストック/日本製/アメリカ製/40s〜00s等の年代・仕様タグで、1アイテムに複数付く"
+        "こともある）はモデルだけでは区別できない「同じ型番でも仕様・年代で価格が桁違いになる"
+        "個体差」の分析に使うこと。件数が十分ある組み合わせを優先し、タグが付いていないアイテムが"
+        "多い（＝仕様不明のまま出品されている）こと自体もアービトラージの余地として言及してよい。",
         f"```json\n{json.dumps(stats, ensure_ascii=False)}\n```",
         "",
         f"## 追跡対象ブランド設定: {json.dumps(watch_brands, ensure_ascii=False)}",
