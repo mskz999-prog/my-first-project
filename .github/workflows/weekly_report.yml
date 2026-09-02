@@ -97,10 +97,31 @@ jobs:
               MSG="chore: weekly vintage resale report $(date -u +%Y-%m-%d)"
             fi
             git commit -m "$MSG"
-            git push
+            # Collection can run for the better part of an hour, so the
+            # branch may have moved (e.g. someone pushing code changes)
+            # between checkout and this push — a plain `git push` then
+            # gets rejected outright. Rebase onto the latest branch tip
+            # and retry a few times rather than failing the whole run
+            # over an unrelated race.
+            attempt=0
+            until git push; do
+              attempt=$((attempt + 1))
+              if [ "$attempt" -ge 5 ]; then
+                echo "::error::git push failed after $attempt attempts"
+                exit 1
+              fi
+              echo "push rejected (attempt $attempt) — fetching + rebasing onto origin/$GITHUB_REF_NAME and retrying"
+              git fetch origin "$GITHUB_REF_NAME"
+              git rebase "origin/$GITHUB_REF_NAME"
+              sleep 3
+            done
           fi
 
       - name: Upload report as workflow artifact
+        # Runs even if the commit/push step above failed, so the generated
+        # report is still recoverable from the run's Artifacts tab instead
+        # of being silently lost with the ephemeral runner.
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: vintage-resale-report
