@@ -480,6 +480,8 @@ def collect_all(
                 keywords=search_keywords,
                 max_pages_per_keyword=yahoo_cfg.get("max_pages_per_keyword", 3),
                 request_interval_sec=yahoo_cfg.get("request_interval_sec", 2.5),
+                project_root=project_root,
+                backfill_keywords_per_run=yahoo_cfg.get("backfill_keywords_per_run"),
             )
             items.extend(yahoo_items)
             logger.info("yahoo_auction: collected %d items", len(yahoo_items))

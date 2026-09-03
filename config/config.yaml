@@ -49,6 +49,15 @@ sources:
     # ブランド×モデルの組み合わせは元々1ページで収まることがほとんど）。
     max_pages_per_keyword: 1          # 1ページ ~50件。
     request_interval_sec: 2.0         # 相手サーバー負荷を抑えるための最小間隔
+    # 新しいキーワード（brand_catalog.yamlへの追加分含む）は初回だけヤフオクの
+    # 保存上限である過去180日分を自動で遡って取得し（data/trends/yahoo_backfill_state.json
+    # に記録、2回目以降はmax_pages_per_keywordの浅い設定に戻る）、週次推移データ
+    # （data/trends/levis_weekly.jsonl）の初期データを厚くする。
+    # backfill_keywords_per_run: 1回の実行で新規バックフィルするキーワード数の上限。
+    # 未設定（null）なら該当キーワードを一度に全部バックフィルする。本格的に運用に
+    # 乗せる際は、ヤフオクへの一時的な負荷集中を避けるため小さい数値（例: 3〜5）に
+    # 絞ることを推奨。
+    backfill_keywords_per_run: null
 
   mercari:
     enabled: true
