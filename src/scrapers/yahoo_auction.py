@@ -36,6 +36,19 @@ logger = logging.getLogger(__name__)
 BASE_URL = "https://auctions.yahoo.co.jp/closedsearch/closedsearch/{keyword}/0"
 ITEM_URL_FRAGMENT = "/jp/auction/"
 
+# TEMPORARY DEBUG: this dev sandbox can't reach auctions.yahoo.co.jp
+# directly (egress policy), so the only way to check whether the
+# closedsearch results page actually shows each auction's end/close date
+# (which would let sold_at be populated, and — since closedsearch returns
+# *historical* closed auctions, not just today's — potentially let a
+# single collection run backfill several weeks of real transaction dates
+# at once) is to dump the raw per-candidate text from a real run and
+# read it back. Bounded to a handful of candidates total so it doesn't
+# flood the log across ~150 keyword/page combinations. Remove once
+# diagnosed either way.
+_debug_samples_logged = 0
+_DEBUG_SAMPLE_LIMIT = 8
+
 
 def _build_url(keyword: str, page: int) -> str:
     encoded = urllib.parse.quote(keyword, safe="")
@@ -46,12 +59,19 @@ def _build_url(keyword: str, page: int) -> str:
 
 
 def _parse_page(html: str) -> list[MarketItem]:
+    global _debug_samples_logged
     soup = BeautifulSoup(html, "lxml")
     items: list[MarketItem] = []
 
     candidates = find_item_candidates(soup, ITEM_URL_FRAGMENT)
 
     for candidate in candidates:
+        if _debug_samples_logged < _DEBUG_SAMPLE_LIMIT and candidate["title"]:
+            _debug_samples_logged += 1
+            logger.info(
+                "YAHOO_DATE_DEBUG: title=%r price=%s container_text=%r",
+                candidate["title"], candidate["price"], candidate["container_text"],
+            )
         if not candidate["title"]:
             continue
         href = candidate["href"]
