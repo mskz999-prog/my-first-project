@@ -9,7 +9,8 @@ from src.pipeline.report_generator import (
     TREND_HISTORY_DIR,
     TREND_HISTORY_FILE,
     _quick_stats,
-    _save_levis_trend_snapshot,
+    _save_levis_weekly_snapshot,
+    _week_start,
 )
 
 
@@ -65,38 +66,65 @@ def test_quick_stats_top_variants_breaks_down_by_era_tag_and_counts_multi_tag_it
     assert ("Levi's", "501", "") not in variants
 
 
-def test_save_levis_trend_snapshot_appends_one_jsonl_line_per_call(tmp_path):
-    items = [
-        MarketItem(source="yahoo_auction", title="x", price=8000, brand="Levi's", model="501"),
-        MarketItem(source="mercari", title="y", price=6000, brand="Champion", model=None),
-    ]
-    stats = _quick_stats(items)
+def test_week_start_returns_the_monday_of_the_containing_week():
+    # 2026-09-03 is a Thursday; that week's Monday is 2026-08-31.
+    assert _week_start("2026-09-03T09:05:00+09:00") == "2026-08-31"
+    # 2026-08-31 is itself a Monday.
+    assert _week_start("2026-08-31T00:00:00+09:00") == "2026-08-31"
 
-    _save_levis_trend_snapshot(stats, tmp_path, "2026-09-02", "focus-levis")
-    _save_levis_trend_snapshot(stats, tmp_path, "2026-09-09", "weekly")
+
+def test_week_start_returns_none_for_unparseable_timestamp():
+    assert _week_start("not-a-date") is None
+
+
+def test_save_levis_weekly_snapshot_buckets_by_real_sold_week(tmp_path):
+    items = [
+        # Two Levi's yahoo_auction items in the same week (Mon 2026-08-31).
+        MarketItem(
+            source="yahoo_auction", title="x", price=8000, brand="Levi's", model="501",
+            sold_at="2026-09-01T09:00:00+09:00",
+        ),
+        MarketItem(
+            source="yahoo_auction", title="y", price=12000, brand="Levi's", model="501",
+            sold_at="2026-09-03T20:00:00+09:00",
+        ),
+        # A different week (Mon 2026-08-24).
+        MarketItem(
+            source="yahoo_auction", title="z", price=4000, brand="Levi's", model="505",
+            sold_at="2026-08-26T12:00:00+09:00",
+        ),
+        # Not Levi's — must not leak into the snapshot.
+        MarketItem(
+            source="yahoo_auction", title="w", price=6000, brand="Champion",
+            sold_at="2026-09-01T09:00:00+09:00",
+        ),
+        # Levi's but from mercari (no real sold date available) — must be
+        # excluded entirely rather than bucketed under some fake week.
+        MarketItem(source="mercari", title="v", price=9000, brand="Levi's", model="501"),
+    ]
+
+    _save_levis_weekly_snapshot(items, tmp_path, "focus-levis")
 
     history_path = tmp_path / TREND_HISTORY_DIR / TREND_HISTORY_FILE
-    lines = history_path.read_text(encoding="utf-8").strip().splitlines()
-    assert len(lines) == 2
+    assert TREND_HISTORY_FILE == "levis_weekly.jsonl"
+    lines = [json.loads(line) for line in history_path.read_text(encoding="utf-8").strip().splitlines()]
+    by_week = {entry["week_start"]: entry for entry in lines}
 
-    first = json.loads(lines[0])
-    assert first["date"] == "2026-09-02"
-    assert first["mode"] == "focus-levis"
-    assert first["levis_overall"]["brand"] == "Levi's"
-    assert first["levis_overall"]["sold_count"] == 1
-    assert [m["model"] for m in first["top_models"]] == ["501"]
-    # Champion isn't Levi's, so it must not leak into the snapshot.
-    assert all(m["brand"] == "Levi's" for m in first["top_models"])
-
-    second = json.loads(lines[1])
-    assert second["date"] == "2026-09-09"
-    assert second["mode"] == "weekly"
+    assert set(by_week) == {"2026-08-24", "2026-08-31"}
+    assert by_week["2026-08-31"]["mode"] == "focus-levis"
+    assert by_week["2026-08-31"]["levis_overall"]["sold_count"] == 2
+    assert by_week["2026-08-31"]["levis_overall"]["avg_price"] == 10000
+    assert [m["model"] for m in by_week["2026-08-31"]["top_models"]] == ["501"]
+    assert by_week["2026-08-24"]["levis_overall"]["sold_count"] == 1
+    assert by_week["2026-08-24"]["levis_overall"]["avg_price"] == 4000
 
 
-def test_save_levis_trend_snapshot_skips_runs_with_no_levis_data(tmp_path):
-    items = [MarketItem(source="mercari", title="y", price=6000, brand="Champion", model=None)]
-    stats = _quick_stats(items)
+def test_save_levis_weekly_snapshot_skips_when_nothing_qualifies(tmp_path):
+    items = [
+        MarketItem(source="mercari", title="y", price=6000, brand="Levi's", model="501"),
+        MarketItem(source="yahoo_auction", title="z", price=4000, brand="Champion"),
+    ]
 
-    _save_levis_trend_snapshot(stats, tmp_path, "2026-09-02", "focus-levis")
+    _save_levis_weekly_snapshot(items, tmp_path, "weekly")
 
     assert not (tmp_path / TREND_HISTORY_DIR / TREND_HISTORY_FILE).exists()

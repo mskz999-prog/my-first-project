@@ -8,7 +8,7 @@ import json
 import logging
 import os
 from collections import Counter, defaultdict
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from statistics import mean, median
 from typing import Any
@@ -200,50 +200,80 @@ def _quick_stats(items: list[MarketItem]) -> dict[str, Any]:
 
 
 TREND_HISTORY_DIR = "data/trends"
-TREND_HISTORY_FILE = "levis_history.jsonl"
+TREND_HISTORY_FILE = "levis_weekly.jsonl"
 
 
-def _save_levis_trend_snapshot(
-    stats: dict[str, Any],
+def _week_start(iso_timestamp: str) -> str | None:
+    """The Monday (ISO 8601 week start) of the week containing
+    `iso_timestamp`, as a YYYY-MM-DD string — the bucket key for weekly
+    trend history. Returns None for an unparseable timestamp rather than
+    raising, since sold_at is best-effort (see yahoo_auction.py).
+    """
+    try:
+        dt = datetime.fromisoformat(iso_timestamp)
+    except ValueError:
+        return None
+    monday = dt.date() - timedelta(days=dt.weekday())
+    return monday.isoformat()
+
+
+def _save_levis_weekly_snapshot(
+    items: list[MarketItem],
     project_root: Path,
-    date_str: str,
     mode: str,
 ) -> None:
-    """Appends one JSON line per report run with Levi's-specific trend
-    numbers (brand/model/tag price stats) to data/trends/levis_history.jsonl,
-    so repeated runs (weekly or otherwise) slowly build up a real history to
-    chart price movement over time instead of only ever showing one run's
-    snapshot. Scoped to Levi's only for now, matching the era/variant
-    tagging work already validated for this brand — can widen to other
-    watch_brands later once this proves useful. Skipped entirely when a run
-    collected nothing Levi's-related, so the history doesn't fill with
-    hollow entries (e.g. a --brands run focused on some other brand).
+    """Buckets this run's Levi's items by the real week they actually sold
+    (MarketItem.sold_at) and appends one JSON line per week to
+    data/trends/levis_weekly.jsonl — real date-accurate history to chart
+    price movement over time, rather than one blended "whatever this run
+    happened to collect" snapshot per run.
+
+    Scoped to source == "yahoo_auction": it's currently the only source
+    with a real sold date (see README — Mercari's search results don't
+    show one, and there's no public per-item page that does either), so
+    other sources are left out entirely rather than smeared into a
+    misleadingly-dated bucket. Also scoped to Levi's only for now, matching
+    the era/variant tagging work already validated for this brand — can
+    widen to other watch_brands later.
+
+    Appends one entry per (run, week) rather than merging in place: a week
+    that's fully in the past is a closed, unchanging set of auctions, so a
+    later run re-collecting it should see the same (or a superset of)
+    results — readers should prefer the most recent entry for a given
+    week rather than summing duplicates.
     """
-    trend = stats.get("trend", {})
-    levis_brand = next(
-        (b for b in trend.get("top_brands", []) if b.get("brand") == "Levi's"), None
-    )
-    levis_models = [m for m in trend.get("top_models", []) if m.get("brand") == "Levi's"]
-    levis_variants = [v for v in trend.get("top_variants", []) if v.get("brand") == "Levi's"]
-    if levis_brand is None and not levis_models:
+    dated = [
+        i for i in items
+        if i.source == "yahoo_auction" and i.brand == "Levi's" and i.sold_at and i.price
+    ]
+    if not dated:
+        return
+
+    by_week: dict[str, list[MarketItem]] = defaultdict(list)
+    for item in dated:
+        week = _week_start(item.sold_at)
+        if week:
+            by_week[week].append(item)
+    if not by_week:
         return
 
     history_dir = project_root / TREND_HISTORY_DIR
     history_dir.mkdir(parents=True, exist_ok=True)
     history_path = history_dir / TREND_HISTORY_FILE
-    entry = {
-        "run_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
-        "date": date_str,
-        "mode": mode,
-        "trend_total_items": trend.get("total_items"),
-        "trend_sold_with_price": trend.get("total_sold_with_price"),
-        "levis_overall": levis_brand,
-        "top_models": levis_models,
-        "top_variants": levis_variants,
-    }
+    run_at = datetime.now(timezone.utc).isoformat(timespec="seconds")
     with history_path.open("a", encoding="utf-8") as f:
-        f.write(json.dumps(entry, ensure_ascii=False) + "\n")
-    logger.info("Appended Levi's trend snapshot to %s", history_path)
+        for week, week_items in sorted(by_week.items()):
+            breakdown = _brand_category_model_breakdown(week_items)
+            entry = {
+                "run_at": run_at,
+                "week_start": week,
+                "mode": mode,
+                "levis_overall": breakdown["overall"],
+                "top_models": breakdown["top_models"],
+                "top_variants": breakdown["top_variants"],
+            }
+            f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+    logger.info("Appended %d week(s) of Levi's trend history to %s", len(by_week), history_path)
 
 
 def build_user_message(
@@ -408,6 +438,6 @@ def generate_report(
 
     logger.info("Report written to %s", output_path)
 
-    _save_levis_trend_snapshot(_quick_stats(items), project_root, date_str, mode)
+    _save_levis_weekly_snapshot(items, project_root, mode)
 
     return output_path
