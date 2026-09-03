@@ -24,7 +24,9 @@ before), it does not raise.
 from __future__ import annotations
 
 import logging
+import re
 import urllib.parse
+from datetime import datetime, timedelta, timezone
 
 from bs4 import BeautifulSoup
 
@@ -36,6 +38,38 @@ logger = logging.getLogger(__name__)
 BASE_URL = "https://auctions.yahoo.co.jp/closedsearch/closedsearch/{keyword}/0"
 ITEM_URL_FRAGMENT = "/jp/auction/"
 
+_JST = timezone(timedelta(hours=9))
+
+# Each closedsearch result card includes the auction's close date/time right
+# next to "終了" (e.g. "1 9/3 09:05 終了"), confirmed against real page
+# content — see the commit that removed YAHOO_DATE_DEBUG. No year is ever
+# shown, since Yahoo always displays it relative to "now".
+_END_DATE_PATTERN = re.compile(r"(\d{1,2})/(\d{1,2})\s+(\d{1,2}):(\d{2})\s*終了")
+
+
+def _parse_end_datetime(text: str, reference_time: datetime) -> str | None:
+    """Extract the auction's close date/time from a result card's text and
+    return it as an ISO8601 string (JST), or None if the pattern isn't
+    found (e.g. a markup change) — sold_at is best-effort, never required.
+
+    The card never shows a year, only "M/D HH:MM". Yahoo's closedsearch
+    only ever returns already-*closed* auctions, so a parsed month/day that
+    would land more than a day after `reference_time` (the scrape time)
+    can't be this year — it must be from a year ago (e.g. scraping in
+    January but the parsed date reads "12/30").
+    """
+    match = _END_DATE_PATTERN.search(text)
+    if not match:
+        return None
+    month, day, hour, minute = (int(g) for g in match.groups())
+    try:
+        candidate = datetime(reference_time.year, month, day, hour, minute, tzinfo=_JST)
+    except ValueError:
+        return None
+    if candidate > reference_time + timedelta(days=1):
+        candidate = candidate.replace(year=reference_time.year - 1)
+    return candidate.isoformat()
+
 
 def _build_url(keyword: str, page: int) -> str:
     encoded = urllib.parse.quote(keyword, safe="")
@@ -45,9 +79,10 @@ def _build_url(keyword: str, page: int) -> str:
     return f"{base}?b={page * 50 + 1}"
 
 
-def _parse_page(html: str) -> list[MarketItem]:
+def _parse_page(html: str, reference_time: datetime | None = None) -> list[MarketItem]:
     soup = BeautifulSoup(html, "lxml")
     items: list[MarketItem] = []
+    reference_time = reference_time or datetime.now(_JST)
 
     candidates = find_item_candidates(soup, ITEM_URL_FRAGMENT)
 
@@ -63,6 +98,7 @@ def _parse_page(html: str) -> list[MarketItem]:
                 price=candidate["price"],
                 is_sold=True,
                 url=url,
+                sold_at=_parse_end_datetime(candidate["container_text"], reference_time),
             )
         )
     return items
