@@ -1,10 +1,16 @@
+import json
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from src.pipeline.normalize import MarketItem
-from src.pipeline.report_generator import _quick_stats
+from src.pipeline.report_generator import (
+    TREND_HISTORY_DIR,
+    TREND_HISTORY_FILE,
+    _quick_stats,
+    _save_levis_trend_snapshot,
+)
 
 
 def test_quick_stats_excludes_vintage_shop_from_trend_aggregates():
@@ -57,3 +63,40 @@ def test_quick_stats_top_variants_breaks_down_by_era_tag_and_counts_multi_tag_it
     assert variants[("Levi's", "501", "ビッグE")]["avg_price"] == 280000
     # The untagged item contributes to top_models but not top_variants.
     assert ("Levi's", "501", "") not in variants
+
+
+def test_save_levis_trend_snapshot_appends_one_jsonl_line_per_call(tmp_path):
+    items = [
+        MarketItem(source="yahoo_auction", title="x", price=8000, brand="Levi's", model="501"),
+        MarketItem(source="mercari", title="y", price=6000, brand="Champion", model=None),
+    ]
+    stats = _quick_stats(items)
+
+    _save_levis_trend_snapshot(stats, tmp_path, "2026-09-02", "focus-levis")
+    _save_levis_trend_snapshot(stats, tmp_path, "2026-09-09", "weekly")
+
+    history_path = tmp_path / TREND_HISTORY_DIR / TREND_HISTORY_FILE
+    lines = history_path.read_text(encoding="utf-8").strip().splitlines()
+    assert len(lines) == 2
+
+    first = json.loads(lines[0])
+    assert first["date"] == "2026-09-02"
+    assert first["mode"] == "focus-levis"
+    assert first["levis_overall"]["brand"] == "Levi's"
+    assert first["levis_overall"]["sold_count"] == 1
+    assert [m["model"] for m in first["top_models"]] == ["501"]
+    # Champion isn't Levi's, so it must not leak into the snapshot.
+    assert all(m["brand"] == "Levi's" for m in first["top_models"])
+
+    second = json.loads(lines[1])
+    assert second["date"] == "2026-09-09"
+    assert second["mode"] == "weekly"
+
+
+def test_save_levis_trend_snapshot_skips_runs_with_no_levis_data(tmp_path):
+    items = [MarketItem(source="mercari", title="y", price=6000, brand="Champion", model=None)]
+    stats = _quick_stats(items)
+
+    _save_levis_trend_snapshot(stats, tmp_path, "2026-09-02", "focus-levis")
+
+    assert not (tmp_path / TREND_HISTORY_DIR / TREND_HISTORY_FILE).exists()

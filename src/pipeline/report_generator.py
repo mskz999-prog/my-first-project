@@ -199,6 +199,53 @@ def _quick_stats(items: list[MarketItem]) -> dict[str, Any]:
     }
 
 
+TREND_HISTORY_DIR = "data/trends"
+TREND_HISTORY_FILE = "levis_history.jsonl"
+
+
+def _save_levis_trend_snapshot(
+    stats: dict[str, Any],
+    project_root: Path,
+    date_str: str,
+    mode: str,
+) -> None:
+    """Appends one JSON line per report run with Levi's-specific trend
+    numbers (brand/model/tag price stats) to data/trends/levis_history.jsonl,
+    so repeated runs (weekly or otherwise) slowly build up a real history to
+    chart price movement over time instead of only ever showing one run's
+    snapshot. Scoped to Levi's only for now, matching the era/variant
+    tagging work already validated for this brand — can widen to other
+    watch_brands later once this proves useful. Skipped entirely when a run
+    collected nothing Levi's-related, so the history doesn't fill with
+    hollow entries (e.g. a --brands run focused on some other brand).
+    """
+    trend = stats.get("trend", {})
+    levis_brand = next(
+        (b for b in trend.get("top_brands", []) if b.get("brand") == "Levi's"), None
+    )
+    levis_models = [m for m in trend.get("top_models", []) if m.get("brand") == "Levi's"]
+    levis_variants = [v for v in trend.get("top_variants", []) if v.get("brand") == "Levi's"]
+    if levis_brand is None and not levis_models:
+        return
+
+    history_dir = project_root / TREND_HISTORY_DIR
+    history_dir.mkdir(parents=True, exist_ok=True)
+    history_path = history_dir / TREND_HISTORY_FILE
+    entry = {
+        "run_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "date": date_str,
+        "mode": mode,
+        "trend_total_items": trend.get("total_items"),
+        "trend_sold_with_price": trend.get("total_sold_with_price"),
+        "levis_overall": levis_brand,
+        "top_models": levis_models,
+        "top_variants": levis_variants,
+    }
+    with history_path.open("a", encoding="utf-8") as f:
+        f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+    logger.info("Appended Levi's trend snapshot to %s", history_path)
+
+
 def build_user_message(
     items: list[MarketItem],
     hashtags: list[dict[str, str]],
@@ -349,12 +396,18 @@ def generate_report(
     if focus_brands:
         slug = "-".join(b.lower().replace("'", "").replace(" ", "-") for b in focus_brands)
         suffix = f"-focus-{slug}"
+        mode = f"focus-{slug}"
     elif quick:
         suffix = "-quick-test"
+        mode = "quick-test"
     else:
         suffix = ""
+        mode = "weekly"
     output_path = output_dir / f"{date_str}_vintage-resale-report{suffix}.md"
     output_path.write_text(report_markdown, encoding="utf-8")
 
     logger.info("Report written to %s", output_path)
+
+    _save_levis_trend_snapshot(_quick_stats(items), project_root, date_str, mode)
+
     return output_path
