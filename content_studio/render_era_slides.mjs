@@ -5,7 +5,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { createRequire } from "node:module";
 import { eras } from "./data/vans_authentic_eras.mjs";
-import { heelPatch, sideTag, sole, insole } from "./lib/illustrations.mjs";
+import { heelPatch, sideTag, sole, insole, shoeSole } from "./lib/illustrations.mjs";
 
 const require = createRequire(import.meta.url);
 const { chromium } = require("/opt/node22/lib/node_modules/playwright");
@@ -16,7 +16,7 @@ const OUT_DIR = path.join(__dirname, "output");
 const WIDTH = 1080;
 const HEIGHT = 1350;
 
-const ILLUSTRATORS = { heelPatch, sideTag, sole, insole };
+const ILLUSTRATORS = { heelPatch, sideTag, sole, insole, shoeSole };
 
 function mediaCardHtml(item) {
   const svg = ILLUSTRATORS[item.type](item.props);

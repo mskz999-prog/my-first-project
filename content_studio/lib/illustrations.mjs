@@ -50,6 +50,35 @@ export function sole({ type }) {
   return wrap(outline + pattern, "0 0 160 120");
 }
 
+// ソール断面の質感見本（スリット／ワッフル）。靴全体のシルエットは描かず、
+// 生地・質感の違いが伝わることを優先したシンプルな見本にしている。
+export function shoeSole({ type = "waffle", label = "" }) {
+  const soleFill = type === "slit" ? "#4a72a8" : "#8b5e3c";
+  let texture = "";
+  if (type === "slit") {
+    texture = Array.from({ length: 6 })
+      .map((_, i) => `<line x1="34" y1="${34 + i * 12}" x2="126" y2="${34 + i * 12}" stroke="#274a73" stroke-width="3" stroke-linecap="round" opacity="0.75"/>`)
+      .join("");
+  } else {
+    const cells = [];
+    for (let row = 0; row < 4; row++) {
+      for (let col = 0; col < 6; col++) {
+        cells.push(`<rect x="${32 + col * 14}" y="${30 + row * 14}" width="10" height="10" fill="none" stroke="#5c3f24" stroke-width="1.5" opacity="0.7"/>`);
+      }
+    }
+    texture = cells.join("");
+  }
+  const labelText = label
+    ? `<text x="80" y="112" text-anchor="middle" font-size="13" fill="${INK}" font-family="IPAGothic, sans-serif" opacity="0.7">${label}</text>`
+    : "";
+  return wrap(`
+    <path d="M20 60 Q20 20 80 18 Q140 20 140 60 Q140 100 80 102 Q20 100 20 60 Z"
+      fill="${soleFill}" fill-opacity="0.18" stroke="${INK}" stroke-width="4"/>
+    ${texture}
+    ${labelText}
+  `, "0 0 160 120");
+}
+
 // インソール（中敷き）
 export function insole({ label = "", soft = false }) {
   const texture = soft
