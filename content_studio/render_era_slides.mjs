@@ -4,7 +4,7 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { createRequire } from "node:module";
-import { eras } from "./data/vans_authentic_eras.mjs";
+import { eras, intro } from "./data/vans_authentic_eras.mjs";
 import { heelPatch, sideTag, sole, insole, shoeSole } from "./lib/illustrations.mjs";
 
 const require = createRequire(import.meta.url);
@@ -84,7 +84,7 @@ function coverHtml(eras, total, spreadSize) {
       <div class="idx-row">
         <div class="idx-badge">${era.range}</div>
         <div class="idx-name">${era.name}</div>
-        <div class="idx-page">P.${Math.floor(i / spreadSize) + 2}</div>
+        <div class="idx-page">P.${Math.floor(i / spreadSize) + 3}</div>
       </div>`
     )
     .join("");
@@ -222,6 +222,104 @@ function coverHtml(eras, total, spreadSize) {
     </div>
     <div class="index">${rows}</div>
     <div class="footer">※ 古着専門ブログの記述を照合した参考情報です。詳しい判別ポイントは次のページから。</div>
+  </div>
+</body>
+</html>`;
+}
+
+function introHtml(intro, index, total) {
+  const sectionsHtml = intro.sections
+    .map(
+      (s) => `
+      <div class="intro-block">
+        <div class="intro-label">${s.label}</div>
+        <p class="intro-paragraph">${s.paragraph}</p>
+      </div>`
+    )
+    .join("");
+
+  return `<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<style>
+  ${sharedStyle()}
+  .intro-header { text-align: center; margin: 6px 0 30px; }
+  .intro-eyebrow {
+    display: inline-block;
+    border: 3px solid #1a1a1a;
+    border-radius: 999px;
+    padding: 5px 22px;
+    font-size: 16px;
+    letter-spacing: 3px;
+    color: #1a1a1a;
+    margin-bottom: 14px;
+    transform: rotate(-1.5deg);
+  }
+  .intro-heading {
+    font-size: 38px;
+    font-weight: 900;
+    color: #1a1a1a;
+    margin: 0;
+    line-height: 1.4;
+    text-shadow: 2px 2px 0 rgba(0,0,0,0.08);
+  }
+  .intro-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 34px;
+    overflow: hidden;
+  }
+  .intro-block {
+    background: #fffdf6;
+    border: 3px solid #1a1a1a;
+    border-radius: 14px;
+    padding: 32px 38px;
+  }
+  .intro-label {
+    display: inline-block;
+    background: #1a1a1a;
+    color: #f4ecd8;
+    font-size: 16px;
+    font-weight: 700;
+    padding: 5px 16px;
+    border-radius: 6px;
+    margin-bottom: 16px;
+    letter-spacing: 0.5px;
+  }
+  .intro-paragraph {
+    margin: 0;
+    font-size: 22px;
+    line-height: 1.95;
+    color: #262019;
+  }
+  .intro-closing {
+    font-size: 18px;
+    line-height: 1.8;
+    color: #4a3f2c;
+    padding: 0 10px;
+    border-top: 1.5px dashed #c9b98f;
+    padding-top: 20px;
+  }
+</style>
+</head>
+<body>
+  <div class="slide">
+    <div class="topbar">
+      <div class="brand">古着デジタル図鑑 ・ VANS AUTHENTIC</div>
+      <div class="page">${index} / ${total}</div>
+    </div>
+    <div class="intro-header">
+      <div class="intro-eyebrow">${intro.eyebrow}</div>
+      <h1 class="intro-heading">${intro.heading}</h1>
+    </div>
+    <div class="intro-body">
+      ${sectionsHtml}
+      <div class="intro-closing">${intro.closing}</div>
+    </div>
+    <div class="footer">※ Wikipedia・vans.com公式ヒストリー・MR PORTER等を横断して作成した参考情報です。一部エピソードは各情報源が"伝承"として紹介している内容です。</div>
   </div>
 </body>
 </html>`;
@@ -371,17 +469,22 @@ const page = await browser.newPage({
 
 const SPREAD_SIZE = 2; // 1ページあたりの年代数（多いと窮屈、少ないとスカスカになる）
 const spreads = chunk(eras, SPREAD_SIZE);
-const total = spreads.length + 1;
+const total = spreads.length + 2; // 表紙 + 概説 + 年代スプレッド
 
 await page.setContent(coverHtml(eras, total, SPREAD_SIZE), { waitUntil: "load" });
 const coverPath = path.join(OUT_DIR, "vans_authentic_carousel_01_cover.png");
 await page.screenshot({ path: coverPath, clip: { x: 0, y: 0, width: WIDTH, height: HEIGHT } });
 console.log(`Saved: ${coverPath}`);
 
+await page.setContent(introHtml(intro, 2, total), { waitUntil: "load" });
+const introPath = path.join(OUT_DIR, "vans_authentic_carousel_02_intro.png");
+await page.screenshot({ path: introPath, clip: { x: 0, y: 0, width: WIDTH, height: HEIGHT } });
+console.log(`Saved: ${introPath}`);
+
 for (let i = 0; i < spreads.length; i++) {
-  const html = spreadHtml(spreads[i], i + 2, total);
+  const html = spreadHtml(spreads[i], i + 3, total);
   await page.setContent(html, { waitUntil: "load" });
-  const outPath = path.join(OUT_DIR, `vans_authentic_carousel_${String(i + 2).padStart(2, "0")}.png`);
+  const outPath = path.join(OUT_DIR, `vans_authentic_carousel_${String(i + 3).padStart(2, "0")}.png`);
   await page.screenshot({ path: outPath, clip: { x: 0, y: 0, width: WIDTH, height: HEIGHT } });
   console.log(`Saved: ${outPath}`);
 }
