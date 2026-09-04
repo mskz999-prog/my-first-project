@@ -208,7 +208,7 @@ function coverHtml(eras, total, spreadSize) {
     box-sizing: border-box;
   }
   .idx-thumb svg { width: 100%; height: 100%; display: block; }
-  .idx-thumb img { width: 100%; height: 100%; display: block; object-fit: cover; border-radius: 4px; }
+  .idx-thumb img { width: 100%; height: 100%; display: block; object-fit: contain; border-radius: 4px; }
   .idx-text { flex: 1; }
   .idx-badge {
     display: inline-block;
@@ -470,7 +470,7 @@ function spreadHtml(erasGroup, index, total) {
     box-shadow: 4px 4px 0 rgba(0,0,0,0.07);
   }
   .media-art svg { width: 100%; height: 120px; display: block; }
-  .media-art img { width: 100%; height: 120px; display: block; object-fit: cover; border-radius: 6px; }
+  .media-art img { width: 100%; height: 120px; display: block; object-fit: contain; border-radius: 6px; }
   .media-caption {
     margin-top: 8px;
     font-size: 15px;
