@@ -77,14 +77,14 @@ function sharedStyle() {
   `;
 }
 
-function coverHtml(eras, total) {
+function coverHtml(eras, total, spreadSize) {
   const rows = eras
     .map(
       (era, i) => `
       <div class="idx-row">
         <div class="idx-badge">${era.range}</div>
         <div class="idx-name">${era.name}</div>
-        <div class="idx-page">P.${i + 2}</div>
+        <div class="idx-page">P.${Math.floor(i / spreadSize) + 2}</div>
       </div>`
     )
     .join("");
@@ -202,7 +202,7 @@ function coverHtml(eras, total) {
     <div class="header">
       <div class="brand-badge">年代判別 完全ガイド</div>
       <h1 class="title">VANS AUTHENTIC</h1>
-      <div class="subtitle">〜 5つの年代で見分けるチェックポイント 〜</div>
+      <div class="subtitle">〜 6つの年代で見分けるチェックポイント 〜</div>
     </div>
     <div class="callout-row">
       <div class="callout-chip">ヒールパッチ</div>
@@ -227,10 +227,30 @@ function coverHtml(eras, total) {
 </html>`;
 }
 
-function pageHtml(era, index, total) {
+function eraSectionHtml(era) {
   const mediaHtml = era.media.map(mediaCardHtml).join("");
   const bulletsHtml = era.bullets.map((b) => `<li>${b}</li>`).join("");
   const triviaHtml = era.trivia ? `<div class="trivia">${era.trivia}</div>` : "";
+  return `
+    <div class="era-section">
+      <div class="era-heading">
+        <div class="era-badge">${era.range}</div>
+        <h2 class="era-name">${era.name}</h2>
+      </div>
+      <div class="media-row">${mediaHtml}</div>
+      <div class="points">
+        <ul>${bulletsHtml}</ul>
+        ${triviaHtml}
+      </div>
+    </div>
+  `;
+}
+
+// 1ページに1〜2年代分をまとめて表示する（1年代だけだと余白がスカスカになるため）
+function spreadHtml(erasGroup, index, total) {
+  const sectionsHtml = erasGroup
+    .map((era, i) => eraSectionHtml(era) + (i < erasGroup.length - 1 ? '<hr class="divider">' : ""))
+    .join("");
 
   return `<!DOCTYPE html>
 <html lang="ja">
@@ -242,71 +262,84 @@ function pageHtml(era, index, total) {
     flex: 1;
     display: flex;
     flex-direction: column;
-    justify-content: center;
   }
-  .era-heading { text-align: center; margin-bottom: 48px; }
+  .era-section {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+  }
+  .divider {
+    width: 100%;
+    border: none;
+    border-top: 2.5px dashed #c9b98f;
+    margin: 6px 0;
+  }
+  .era-heading { text-align: center; margin-bottom: 24px; }
   .era-badge {
     display: inline-block;
     background: #1a1a1a;
     color: #f4ecd8;
-    font-size: 26px;
+    font-size: 20px;
     font-weight: 700;
-    padding: 7px 26px;
-    border-radius: 8px;
-    letter-spacing: 1px;
+    padding: 5px 20px;
+    border-radius: 7px;
+    letter-spacing: 0.5px;
     transform: rotate(-1.2deg);
   }
   .era-name {
-    font-size: 62px;
+    font-size: 38px;
     font-weight: 900;
     color: #1a1a1a;
-    margin: 18px 0 0;
-    text-shadow: 3px 3px 0 rgba(0,0,0,0.08);
+    margin: 12px 0 0;
+    text-shadow: 2px 2px 0 rgba(0,0,0,0.08);
   }
   .media-row {
     display: flex;
     justify-content: center;
-    gap: 32px;
-    margin-bottom: 52px;
+    gap: 20px;
+    margin-bottom: 22px;
     flex-wrap: wrap;
   }
   .media-card {
-    width: 290px;
+    width: 200px;
     text-align: center;
   }
   .media-art {
     background: #fffdf6;
     border: 3px solid #1a1a1a;
-    border-radius: 18px;
-    padding: 22px;
-    box-shadow: 5px 5px 0 rgba(0,0,0,0.07);
+    border-radius: 14px;
+    padding: 14px;
+    box-shadow: 4px 4px 0 rgba(0,0,0,0.07);
   }
-  .media-art svg { width: 100%; height: 180px; display: block; }
+  .media-art svg { width: 100%; height: 120px; display: block; }
   .media-caption {
-    margin-top: 12px;
-    font-size: 20px;
+    margin-top: 8px;
+    font-size: 15px;
     color: #4a3f2c;
-    letter-spacing: 1px;
+    letter-spacing: 0.5px;
   }
   .points {
     background: #fffdf6;
     border: 3px solid #1a1a1a;
-    border-radius: 14px;
-    padding: 32px 40px;
-    margin: 0 10px;
+    border-radius: 12px;
+    padding: 20px 28px;
+    margin: 0 6px;
+    max-width: 860px;
   }
   .points ul {
     margin: 0;
-    padding-left: 28px;
-    font-size: 27px;
-    line-height: 1.85;
+    padding-left: 24px;
+    font-size: 19px;
+    line-height: 1.6;
     color: #262019;
   }
   .points .trivia {
-    margin-top: 14px;
-    padding-top: 14px;
+    margin-top: 10px;
+    padding-top: 10px;
     border-top: 1.5px dashed #c9b98f;
-    font-size: 20px;
+    font-size: 15px;
     color: #6b5d3f;
   }
 </style>
@@ -317,21 +350,17 @@ function pageHtml(era, index, total) {
       <div class="brand">古着デジタル図鑑 ・ VANS AUTHENTIC</div>
       <div class="page">${index} / ${total}</div>
     </div>
-    <div class="content">
-      <div class="era-heading">
-        <div class="era-badge">${era.range}</div>
-        <h1 class="era-name">${era.name}</h1>
-      </div>
-      <div class="media-row">${mediaHtml}</div>
-      <div class="points">
-        <ul>${bulletsHtml}</ul>
-        ${triviaHtml}
-      </div>
-    </div>
+    <div class="content">${sectionsHtml}</div>
     <div class="footer">※ 古着専門ブログの記述を照合した参考情報です。個体差があるため実物での確認を推奨します。イラストは参考図です。</div>
   </div>
 </body>
 </html>`;
+}
+
+function chunk(arr, size) {
+  const out = [];
+  for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
+  return out;
 }
 
 const browser = await chromium.launch({ executablePath: "/opt/pw-browsers/chromium" });
@@ -340,15 +369,17 @@ const page = await browser.newPage({
   deviceScaleFactor: 2,
 });
 
-const total = eras.length + 1;
+const SPREAD_SIZE = 2; // 1ページあたりの年代数（多いと窮屈、少ないとスカスカになる）
+const spreads = chunk(eras, SPREAD_SIZE);
+const total = spreads.length + 1;
 
-await page.setContent(coverHtml(eras, total), { waitUntil: "load" });
+await page.setContent(coverHtml(eras, total, SPREAD_SIZE), { waitUntil: "load" });
 const coverPath = path.join(OUT_DIR, "vans_authentic_carousel_01_cover.png");
 await page.screenshot({ path: coverPath, clip: { x: 0, y: 0, width: WIDTH, height: HEIGHT } });
 console.log(`Saved: ${coverPath}`);
 
-for (let i = 0; i < eras.length; i++) {
-  const html = pageHtml(eras[i], i + 2, total);
+for (let i = 0; i < spreads.length; i++) {
+  const html = spreadHtml(spreads[i], i + 2, total);
   await page.setContent(html, { waitUntil: "load" });
   const outPath = path.join(OUT_DIR, `vans_authentic_carousel_${String(i + 2).padStart(2, "0")}.png`);
   await page.screenshot({ path: outPath, clip: { x: 0, y: 0, width: WIDTH, height: HEIGHT } });
