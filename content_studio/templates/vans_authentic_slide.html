@@ -25,28 +25,28 @@
       repeating-linear-gradient(0deg, rgba(120,100,60,0.03) 0px, rgba(120,100,60,0.03) 1px, transparent 1px, transparent 3px),
       #f4ecd8;
     box-sizing: border-box;
-    padding: 56px 64px 40px;
+    padding: 46px 58px 30px;
   }
 
   .header {
     text-align: center;
-    margin-bottom: 20px;
+    margin-bottom: 14px;
   }
 
   .brand-badge {
     display: inline-block;
     border: 3px solid #1a1a1a;
     border-radius: 999px;
-    padding: 5px 24px;
-    font-size: 18px;
-    letter-spacing: 4px;
+    padding: 4px 20px;
+    font-size: 16px;
+    letter-spacing: 3px;
     color: #1a1a1a;
-    margin-bottom: 14px;
+    margin-bottom: 10px;
     transform: rotate(-2deg);
   }
 
   .title {
-    font-size: 76px;
+    font-size: 62px;
     font-weight: 900;
     letter-spacing: 1px;
     color: #1a1a1a;
@@ -55,26 +55,25 @@
   }
 
   .subtitle {
-    font-size: 26px;
+    font-size: 21px;
     color: #4a3f2c;
-    margin-top: 8px;
-    letter-spacing: 2px;
+    margin-top: 6px;
+    letter-spacing: 1.5px;
   }
 
   .callout-row {
     display: flex;
     justify-content: center;
-    gap: 16px;
-    margin: 24px 0 22px;
+    gap: 14px;
+    margin: 16px 0 14px;
   }
 
   .callout-chip {
-    position: relative;
     border: 2.5px solid #1a1a1a;
     border-radius: 999px;
     background: #fffdf6;
-    padding: 8px 18px;
-    font-size: 19px;
+    padding: 6px 16px;
+    font-size: 16px;
     color: #1a1a1a;
     white-space: nowrap;
   }
@@ -82,129 +81,134 @@
   .callout-chip:nth-child(1) { transform: rotate(-1.5deg); }
   .callout-chip:nth-child(2) { transform: rotate(1.5deg); }
   .callout-chip:nth-child(3) { transform: rotate(-1.5deg); }
+  .callout-chip:nth-child(4) { transform: rotate(1.5deg); }
 
   .visual-placeholder {
-    margin: 0 auto 26px;
-    width: 780px;
-    height: 190px;
+    margin: 0 auto 16px;
+    width: 800px;
+    height: 100px;
     border: 3px dashed #8a7a55;
-    border-radius: 16px;
+    border-radius: 14px;
     background: rgba(255,255,255,0.35);
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 20px;
+    gap: 16px;
     color: #6b5d3f;
   }
 
-  .visual-placeholder svg { width: 90px; height: 90px; opacity: 0.55; flex: none; }
+  .visual-placeholder svg { width: 54px; height: 54px; opacity: 0.55; flex: none; }
   .visual-placeholder .ph-text { text-align: left; }
-  .visual-placeholder .ph-label { font-size: 21px; letter-spacing: 1px; }
-  .visual-placeholder .ph-sub { font-size: 15px; color: #8a7a55; margin-top: 4px; }
+  .visual-placeholder .ph-label { font-size: 17px; letter-spacing: 0.5px; }
+  .visual-placeholder .ph-sub { font-size: 13px; color: #8a7a55; margin-top: 2px; }
 
   .timeline {
     display: flex;
     flex-direction: column;
-    gap: 18px;
+    gap: 10px;
   }
 
   .era-card {
     position: relative;
     background: #fffdf6;
-    border: 3px solid #1a1a1a;
-    border-radius: 14px;
-    padding: 18px 24px;
+    border: 2.5px solid #1a1a1a;
+    border-radius: 12px;
+    padding: 12px 20px;
   }
 
-  /* 手描き二重線っぽく見せるためのラフなアウトライン */
   .era-card::before {
     content: "";
     position: absolute;
-    inset: -5px;
+    inset: -4px;
     border: 2px solid #1a1a1a;
-    border-radius: 16px;
-    opacity: 0.35;
+    border-radius: 14px;
+    opacity: 0.32;
     z-index: -1;
   }
 
-  .era-card:nth-child(1) { transform: rotate(-0.6deg); }
-  .era-card:nth-child(2) { transform: rotate(0.5deg); }
+  .era-card:nth-child(1) { transform: rotate(-0.5deg); }
+  .era-card:nth-child(2) { transform: rotate(0.4deg); }
   .era-card:nth-child(3) { transform: rotate(-0.4deg); }
-  .era-card:nth-child(1)::before { transform: rotate(1.1deg); }
-  .era-card:nth-child(2)::before { transform: rotate(-0.9deg); }
-  .era-card:nth-child(3)::before { transform: rotate(0.8deg); }
+  .era-card:nth-child(4) { transform: rotate(0.5deg); }
+  .era-card:nth-child(5) { transform: rotate(-0.3deg); }
+  .era-card:nth-child(1)::before { transform: rotate(1deg); }
+  .era-card:nth-child(2)::before { transform: rotate(-0.8deg); }
+  .era-card:nth-child(3)::before { transform: rotate(0.9deg); }
+  .era-card:nth-child(4)::before { transform: rotate(-0.7deg); }
+  .era-card:nth-child(5)::before { transform: rotate(0.8deg); }
 
   .era-head {
     display: flex;
     align-items: baseline;
-    gap: 14px;
-    margin-bottom: 10px;
+    gap: 12px;
+    margin-bottom: 6px;
   }
 
   .era-badge {
     background: #1a1a1a;
     color: #f4ecd8;
-    font-size: 21px;
+    font-size: 17px;
     font-weight: 700;
-    padding: 4px 16px;
-    border-radius: 7px;
-    letter-spacing: 0.5px;
+    padding: 3px 13px;
+    border-radius: 6px;
+    letter-spacing: 0.3px;
     white-space: nowrap;
   }
 
   .era-name {
-    font-size: 21px;
+    font-size: 17px;
     color: #4a3f2c;
     font-weight: 700;
   }
 
   .era-body {
     display: flex;
-    gap: 20px;
+    gap: 16px;
   }
 
   .era-thumb {
-    width: 128px;
-    height: 128px;
+    width: 92px;
+    height: 92px;
     flex: none;
-    border: 2.5px dashed #8a7a55;
-    border-radius: 10px;
+    border: 2px dashed #8a7a55;
+    border-radius: 8px;
     background: rgba(0,0,0,0.02);
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 14px;
+    font-size: 11.5px;
     color: #8a7a55;
     text-align: center;
-    padding: 8px;
+    padding: 6px;
     box-sizing: border-box;
-    line-height: 1.4;
+    line-height: 1.35;
   }
 
   .era-points {
     flex: 1;
-    font-size: 19px;
-    line-height: 1.6;
+    font-size: 15.5px;
+    line-height: 1.5;
     color: #262019;
     margin: 0;
-    padding-left: 24px;
+    padding-left: 20px;
   }
 
-  .era-points li { margin-bottom: 4px; }
+  .era-points li { margin-bottom: 2px; }
+  .era-points .trivia { color: #6b5d3f; font-size: 14px; }
 
   .footer {
     position: absolute;
     left: 0;
     right: 0;
-    bottom: 26px;
+    bottom: 16px;
     text-align: center;
   }
 
   .disclaimer {
-    font-size: 14px;
+    font-size: 13px;
     color: #8a7a55;
-    margin: 0 64px;
-    line-height: 1.6;
+    margin: 0 58px;
+    line-height: 1.5;
   }
 </style>
 </head>
@@ -213,13 +217,14 @@
     <div class="header">
       <div class="brand-badge">古着デジタル図鑑</div>
       <h1 class="title">VANS AUTHENTIC</h1>
-      <div class="subtitle">〜 年代判別の3つのポイント 〜</div>
+      <div class="subtitle">〜 年代判別チェックポイント 〜</div>
     </div>
 
     <div class="callout-row">
       <div class="callout-chip">ヒールパッチ</div>
       <div class="callout-chip">ソール</div>
       <div class="callout-chip">サイドタグ</div>
+      <div class="callout-chip">インソール</div>
     </div>
 
     <div class="visual-placeholder">
@@ -236,49 +241,78 @@
     <div class="timeline">
       <div class="era-card">
         <div class="era-head">
-          <div class="era-badge">1966〜70s初期</div>
+          <div class="era-badge">〜1966年頃</div>
           <div class="era-name">VANのみ期</div>
         </div>
         <div class="era-body">
           <div class="era-thumb">ヒールパッチ<br>クローズアップ</div>
           <ul class="era-points">
-            <li>ヒールパッチは「VAN」のみのシンプル表記、サイドタグはまだ付いていない</li>
-            <li>ソールはワッフルではなく青みがかった「スリットソール」</li>
+            <li>ヒールパッチは「VAN」のみ、インソールは「VAN QUALITY」表記</li>
+            <li>サイドタグはまだ無く、ソールは青い「スリットソール」</li>
           </ul>
         </div>
       </div>
 
       <div class="era-card">
         <div class="era-head">
-          <div class="era-badge">1976〜80s初期</div>
-          <div class="era-name">OFF THE WALL期</div>
+          <div class="era-badge">60s末〜70s前半</div>
+          <div class="era-name">VAN DOREN期</div>
         </div>
         <div class="era-body">
           <div class="era-thumb">ヒールパッチ<br>クローズアップ</div>
           <ul class="era-points">
-            <li>ヒールパッチに「OFF THE WALL」ロゴが追加、左上に「T.M.」表記</li>
-            <li>サイドタグは青文字の「VANS®」、ソールは茶色のワッフルソールに</li>
+            <li>ヒールパッチが「VAN DOREN／Made in U.S.A.」表記に統合</li>
+            <li>青文字のサイドタグ「VANS」が登場、ソールはワッフルソールへ切替</li>
           </ul>
         </div>
       </div>
 
       <div class="era-card">
         <div class="era-head">
-          <div class="era-badge">80s後期〜90s後期</div>
-          <div class="era-name">USA製後期</div>
+          <div class="era-badge">1976〜70s末</div>
+          <div class="era-name">OFF THE WALL登場期</div>
+        </div>
+        <div class="era-body">
+          <div class="era-thumb">ヒールパッチ<br>クローズアップ</div>
+          <ul class="era-points">
+            <li>赤いヒールパッチに「OFF THE WALL」ロゴ、左上「T.M.」表記</li>
+            <li>サイドタグは青文字「VANS」に®マークが追加</li>
+            <li class="trivia">由来：スケーターTony Alvaのトリックを見て「off the wall」と言ったことから</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="era-card">
+        <div class="era-head">
+          <div class="era-badge">1980年代</div>
+          <div class="era-name">®マーク・黒文字期</div>
         </div>
         <div class="era-body">
           <div class="era-thumb">サイドタグ<br>クローズアップ</div>
           <ul class="era-points">
-            <li>ヒールパッチの表記は「T.M.」→「®」へ、サイドタグは黒文字の「VANS®」に</li>
-            <li>90年代後半以降は生産地が海外へ移り「Made in U.S.A.」表記が消える</li>
+            <li>ヒールパッチは「T.M.」→「®」表記、または白黒「VANS MADE IN USA」も併存</li>
+            <li>80年代後期にサイドタグが黒文字「VANS®」に、インソールは無地に</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="era-card">
+        <div class="era-head">
+          <div class="era-badge">1990s後期〜</div>
+          <div class="era-name">海外生産シフト期</div>
+        </div>
+        <div class="era-body">
+          <div class="era-thumb">インソール<br>クローズアップ</div>
+          <ul class="era-points">
+            <li>生産地がアジア圏へ移り、ヒールパッチ・インソールの「Made in U.S.A.」表記が消える</li>
+            <li>インソールがCONVERSE ALL STAR風の柔らかい素材に変化</li>
           </ul>
         </div>
       </div>
     </div>
 
     <div class="footer">
-      <div class="disclaimer">※ 古着専門ブログ複数（一次資料含む）を照合して作成した参考情報です。個体差・実物での再確認を推奨します。</div>
+      <div class="disclaimer">※ 古着専門ブログ5サイトの記述を照合し、矛盾しない内容を採用して作成した参考情報です。個体差があるため実物での確認を推奨します。</div>
     </div>
   </div>
 </body>
