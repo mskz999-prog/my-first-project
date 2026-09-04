@@ -5,7 +5,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { createRequire } from "node:module";
 import { eras, intro } from "./data/vans_authentic_eras.mjs";
-import { heelPatch, sideTag, sole, insole, shoeSole } from "./lib/illustrations.mjs";
+import { heelPatch, sideTag, sole, insole, shoeSole, storefront, skateboard } from "./lib/illustrations.mjs";
 
 const require = createRequire(import.meta.url);
 const { chromium } = require("/opt/node22/lib/node_modules/playwright");
@@ -16,7 +16,7 @@ const OUT_DIR = path.join(__dirname, "output");
 const WIDTH = 1080;
 const HEIGHT = 1350;
 
-const ILLUSTRATORS = { heelPatch, sideTag, sole, insole, shoeSole };
+const ILLUSTRATORS = { heelPatch, sideTag, sole, insole, shoeSole, storefront, skateboard };
 
 function mediaCardHtml(item) {
   const svg = ILLUSTRATORS[item.type](item.props);
@@ -247,13 +247,17 @@ function coverHtml(eras, total, spreadSize) {
 
 function introHtml(intro, index, total) {
   const sectionsHtml = intro.sections
-    .map(
-      (s) => `
+    .map((s) => {
+      const iconSvg = ILLUSTRATORS[s.icon]();
+      return `
       <div class="intro-block">
-        <div class="intro-label">${s.label}</div>
-        <p class="intro-paragraph">${s.paragraph}</p>
-      </div>`
-    )
+        <div class="intro-icon">${iconSvg}</div>
+        <div class="intro-text">
+          <div class="intro-label">${s.label}</div>
+          <p class="intro-paragraph">${s.paragraph}</p>
+        </div>
+      </div>`;
+    })
     .join("");
 
   return `<!DOCTYPE html>
@@ -291,11 +295,26 @@ function introHtml(intro, index, total) {
     overflow: hidden;
   }
   .intro-block {
+    display: flex;
+    align-items: center;
+    gap: 26px;
     background: #fffdf6;
     border: 3px solid #1a1a1a;
     border-radius: 14px;
-    padding: 32px 38px;
+    padding: 28px 34px;
   }
+  .intro-icon {
+    flex: none;
+    width: 130px;
+    height: 130px;
+    border: 2.5px dashed #8a7a55;
+    border-radius: 12px;
+    padding: 14px;
+    box-sizing: border-box;
+    background: rgba(0,0,0,0.02);
+  }
+  .intro-icon svg { width: 100%; height: 100%; display: block; }
+  .intro-text { flex: 1; }
   .intro-label {
     display: inline-block;
     background: #1a1a1a;

@@ -79,6 +79,29 @@ export function shoeSole({ type = "waffle", label = "" }) {
   `, "0 0 160 120");
 }
 
+// 工場兼直営店の建物（起源セクション用アイコン）
+export function storefront() {
+  return wrap(`
+    <path d="M18 52 L80 18 L142 52 L142 56 L18 56 Z" fill="${PAPER}" stroke="${INK}" stroke-width="4" stroke-linejoin="round"/>
+    <rect x="28" y="54" width="104" height="52" fill="${PAPER}" stroke="${INK}" stroke-width="4"/>
+    <rect x="40" y="64" width="20" height="18" fill="none" stroke="${INK}" stroke-width="3"/>
+    <rect x="100" y="64" width="20" height="18" fill="none" stroke="${INK}" stroke-width="3"/>
+    <rect x="68" y="78" width="24" height="28" fill="${INK}" opacity="0.12" stroke="${INK}" stroke-width="3"/>
+  `);
+}
+
+// スケートボード（スケートカルチャー接続セクション用アイコン）
+export function skateboard() {
+  return wrap(`
+    <g transform="rotate(-10 80 62)">
+      <rect x="18" y="54" width="124" height="17" rx="8.5" fill="${PAPER}" stroke="${INK}" stroke-width="4"/>
+      <circle cx="44" cy="80" r="10" fill="${PAPER}" stroke="${INK}" stroke-width="3.5"/>
+      <circle cx="116" cy="80" r="10" fill="${PAPER}" stroke="${INK}" stroke-width="3.5"/>
+    </g>
+    <path d="M12 96 C 26 90 34 90 46 96" stroke="${INK}" stroke-width="2" opacity="0.4" fill="none" stroke-linecap="round"/>
+  `);
+}
+
 // インソール（中敷き）
 export function insole({ label = "", soft = false }) {
   const texture = soft
