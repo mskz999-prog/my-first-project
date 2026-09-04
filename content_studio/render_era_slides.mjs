@@ -79,14 +79,19 @@ function sharedStyle() {
 
 function coverHtml(eras, total, spreadSize) {
   const rows = eras
-    .map(
-      (era, i) => `
+    .map((era, i) => {
+      const thumbItem = era.media[0];
+      const thumbSvg = ILLUSTRATORS[thumbItem.type](thumbItem.props);
+      return `
       <div class="idx-row">
-        <div class="idx-badge">${era.range}</div>
-        <div class="idx-name">${era.name}</div>
+        <div class="idx-thumb">${thumbSvg}</div>
+        <div class="idx-text">
+          <div class="idx-badge">${era.range}</div>
+          <div class="idx-name">${era.name}</div>
+        </div>
         <div class="idx-page">P.${Math.floor(i / spreadSize) + 3}</div>
-      </div>`
-    )
+      </div>`;
+    })
     .join("");
 
   return `<!DOCTYPE html>
@@ -172,17 +177,30 @@ function coverHtml(eras, total, spreadSize) {
   }
   .idx-row:nth-child(odd) { transform: rotate(-0.4deg); }
   .idx-row:nth-child(even) { transform: rotate(0.4deg); }
+  .idx-thumb {
+    width: 64px;
+    height: 64px;
+    flex: none;
+    border: 2px solid #1a1a1a;
+    border-radius: 10px;
+    background: #f4ecd8;
+    padding: 6px;
+    box-sizing: border-box;
+  }
+  .idx-thumb svg { width: 100%; height: 100%; display: block; }
+  .idx-text { flex: 1; }
   .idx-badge {
+    display: inline-block;
     background: #1a1a1a;
     color: #f4ecd8;
-    font-size: 18px;
+    font-size: 16px;
     font-weight: 700;
-    padding: 5px 16px;
+    padding: 4px 14px;
     border-radius: 7px;
     white-space: nowrap;
+    margin-bottom: 6px;
   }
   .idx-name {
-    flex: 1;
     font-size: 24px;
     font-weight: 700;
     color: #262019;
