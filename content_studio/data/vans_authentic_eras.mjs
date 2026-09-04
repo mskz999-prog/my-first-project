@@ -38,7 +38,7 @@ export const eras = [
       "この頃はまだサイドタグ自体が存在せず、ソールも後年主流になるワッフルパターンではなく、青みがかった「スリットソール」が使われていた。",
     ],
     media: [
-      { type: "heelPatch", caption: "ヒールパッチ（初期）", props: { label: "VAN" } },
+      { type: "heelPatch", caption: "ヒールパッチ（初期）", props: { label: "VAN" }, photo: "heel_patches/van_patch.jpg" },
       { type: "heelPatch", caption: "ヒールパッチ（後期）", props: { label: "VAN DOREN", sub: "Made in U.S.A." } },
       { type: "shoeSole", caption: "ソール（スリット）", props: { type: "slit" } },
     ],
@@ -64,7 +64,7 @@ export const eras = [
       "Z-Boysのトニー・アルヴァらが実際に履いていた時期と重なるため、ヴィンテージ古着として特に人気が高い年代のひとつとされる。サイドタグは引き続き青文字の「VANS」。",
     ],
     media: [
-      { type: "heelPatch", caption: "ヒールパッチ", props: { label: "OFF THE WALL", sub: "T.M.", fill: "#c9564a" } },
+      { type: "heelPatch", caption: "ヒールパッチ", props: { label: "OFF THE WALL", sub: "T.M.", fill: "#c9564a" }, photo: "heel_patches/off_the_wall_tm.jpg" },
       { type: "sideTag", caption: "サイドタグ（青文字）", props: { label: "VANS", color: "#2c4a7c" } },
       { type: "shoeSole", caption: "ソール（ワッフル）", props: { type: "waffle" } },
     ],
@@ -77,7 +77,7 @@ export const eras = [
       "一方でサイドタグは青文字のまま「VANS®」に、®（登録商標）マークが新たに加わるのがこの年代を見分ける一番のポイントになる。",
     ],
     media: [
-      { type: "heelPatch", caption: "ヒールパッチ", props: { label: "OFF THE WALL", sub: "T.M.", fill: "#c9564a" } },
+      { type: "heelPatch", caption: "ヒールパッチ", props: { label: "OFF THE WALL", sub: "T.M.", fill: "#c9564a" }, photo: "heel_patches/off_the_wall_tm.jpg" },
       { type: "sideTag", caption: "サイドタグ（青文字＋®）", props: { label: "VANS", color: "#2c4a7c", mark: "®" } },
     ],
   },
@@ -89,7 +89,7 @@ export const eras = [
       "サイドタグは青文字から黒文字の「VANS®」へと変化し、以降しばらくこの配色が定番になっていく。",
     ],
     media: [
-      { type: "heelPatch", caption: "ヒールパッチ", props: { label: "OFF THE WALL", sub: "MADE IN USA", fill: "#c9564a" } },
+      { type: "heelPatch", caption: "ヒールパッチ", props: { label: "OFF THE WALL", sub: "MADE IN USA", fill: "#c9564a" }, photo: "heel_patches/off_the_wall_r_madeinusa.jpg" },
       { type: "sideTag", caption: "サイドタグ（黒文字）", props: { label: "VANS", color: "#1a1a1a", mark: "®" } },
     ],
   },
@@ -101,7 +101,7 @@ export const eras = [
       "後年、ヒールパッチの「Made in U.S.A.」表記そのものが消えていくのは、この生産シフトの延長線上にある変化として理解できる。",
     ],
     media: [
-      { type: "heelPatch", caption: "ヒールパッチ", props: { label: "OFF THE WALL", sub: "MADE IN USA", fill: "#c9564a" } },
+      { type: "heelPatch", caption: "ヒールパッチ", props: { label: "OFF THE WALL", sub: "MADE IN USA", fill: "#c9564a" }, photo: "heel_patches/off_the_wall_r_madeinusa.jpg" },
       { type: "sideTag", caption: "サイドタグ（黒文字）", props: { label: "VANS", color: "#1a1a1a", mark: "®" } },
       { type: "shoeSole", caption: "ソール（ワッフル・柔らか）", props: { type: "waffle" } },
     ],

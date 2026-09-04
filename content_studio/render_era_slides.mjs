@@ -2,6 +2,7 @@
 // 使い方: node content_studio/render_era_slides.mjs
 
 import path from "node:path";
+import fs from "node:fs";
 import { fileURLToPath } from "node:url";
 import { createRequire } from "node:module";
 import { eras, intro } from "./data/vans_authentic_eras.mjs";
@@ -12,17 +13,37 @@ const { chromium } = require("/opt/node22/lib/node_modules/playwright");
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const OUT_DIR = path.join(__dirname, "output");
+const ASSETS_DIR = path.join(__dirname, "assets");
 
 const WIDTH = 1080;
 const HEIGHT = 1350;
 
 const ILLUSTRATORS = { heelPatch, sideTag, sole, insole, shoeSole, storefront, skateboard };
 
+const photoDataUriCache = new Map();
+function photoDataUri(relPath) {
+  if (!photoDataUriCache.has(relPath)) {
+    const buf = fs.readFileSync(path.join(ASSETS_DIR, relPath));
+    const ext = path.extname(relPath).slice(1).toLowerCase();
+    const mime = ext === "png" ? "image/png" : "image/jpeg";
+    photoDataUriCache.set(relPath, `data:${mime};base64,${buf.toString("base64")}`);
+  }
+  return photoDataUriCache.get(relPath);
+}
+
+// item.photo があれば実写→イラスト変換した画像(Gemini生成)をbase64埋め込みで、
+// 無ければ手描きSVGを使う(setContent経由だとfile://参照が読み込めないためdata URI化している)
+function mediaVisual(item) {
+  if (item.photo) {
+    return `<img src="${photoDataUri(item.photo)}" alt="${item.caption}">`;
+  }
+  return ILLUSTRATORS[item.type](item.props);
+}
+
 function mediaCardHtml(item) {
-  const svg = ILLUSTRATORS[item.type](item.props);
   return `
     <div class="media-card">
-      <div class="media-art">${svg}</div>
+      <div class="media-art">${mediaVisual(item)}</div>
       <div class="media-caption">${item.caption}</div>
     </div>
   `;
@@ -81,10 +102,9 @@ function coverHtml(eras, total, spreadSize) {
   const rows = eras
     .map((era, i) => {
       const thumbItem = era.media[0];
-      const thumbSvg = ILLUSTRATORS[thumbItem.type](thumbItem.props);
       return `
       <div class="idx-row">
-        <div class="idx-thumb">${thumbSvg}</div>
+        <div class="idx-thumb">${mediaVisual(thumbItem)}</div>
         <div class="idx-text">
           <div class="idx-badge">${era.range}</div>
           <div class="idx-name">${era.name}</div>
@@ -188,6 +208,7 @@ function coverHtml(eras, total, spreadSize) {
     box-sizing: border-box;
   }
   .idx-thumb svg { width: 100%; height: 100%; display: block; }
+  .idx-thumb img { width: 100%; height: 100%; display: block; object-fit: cover; border-radius: 4px; }
   .idx-text { flex: 1; }
   .idx-badge {
     display: inline-block;
@@ -449,6 +470,7 @@ function spreadHtml(erasGroup, index, total) {
     box-shadow: 4px 4px 0 rgba(0,0,0,0.07);
   }
   .media-art svg { width: 100%; height: 120px; display: block; }
+  .media-art img { width: 100%; height: 120px; display: block; object-fit: cover; border-radius: 6px; }
   .media-caption {
     margin-top: 8px;
     font-size: 15px;
