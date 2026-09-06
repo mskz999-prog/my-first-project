@@ -454,28 +454,28 @@ function spreadHtml(erasGroup, index, total) {
   .media-row {
     display: flex;
     justify-content: center;
-    gap: 28px;
-    margin-bottom: 40px;
+    gap: 18px;
+    margin-bottom: 36px;
     flex-wrap: wrap;
   }
   .media-card {
-    width: 270px;
+    width: 210px;
     text-align: center;
   }
   .media-art {
     background: #fffdf6;
     border: 3px solid #1a1a1a;
-    border-radius: 16px;
-    padding: 18px;
-    box-shadow: 5px 5px 0 rgba(0,0,0,0.07);
+    border-radius: 14px;
+    padding: 14px;
+    box-shadow: 4px 4px 0 rgba(0,0,0,0.07);
   }
-  .media-art svg { width: 100%; height: 200px; display: block; }
-  .media-art img { width: 100%; height: 200px; display: block; object-fit: contain; border-radius: 8px; }
+  .media-art svg { width: 100%; height: 150px; display: block; }
+  .media-art img { width: 100%; height: 150px; display: block; object-fit: contain; border-radius: 7px; }
   .media-caption {
-    margin-top: 12px;
-    font-size: 18px;
+    margin-top: 10px;
+    font-size: 15px;
     color: #4a3f2c;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.3px;
   }
   .points {
     background: #fffdf6;
