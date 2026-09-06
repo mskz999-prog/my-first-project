@@ -432,71 +432,71 @@ function spreadHtml(erasGroup, index, total) {
     border-top: 2.5px dashed #c9b98f;
     margin: 6px 0;
   }
-  .era-heading { text-align: center; margin-bottom: 24px; }
+  .era-heading { text-align: center; margin-bottom: 36px; }
   .era-badge {
     display: inline-block;
     background: #1a1a1a;
     color: #f4ecd8;
-    font-size: 20px;
+    font-size: 24px;
     font-weight: 700;
-    padding: 5px 20px;
-    border-radius: 7px;
+    padding: 6px 24px;
+    border-radius: 8px;
     letter-spacing: 0.5px;
     transform: rotate(-1.2deg);
   }
   .era-name {
-    font-size: 38px;
+    font-size: 50px;
     font-weight: 900;
     color: #1a1a1a;
-    margin: 12px 0 0;
+    margin: 16px 0 0;
     text-shadow: 2px 2px 0 rgba(0,0,0,0.08);
   }
   .media-row {
     display: flex;
     justify-content: center;
-    gap: 20px;
-    margin-bottom: 22px;
+    gap: 28px;
+    margin-bottom: 40px;
     flex-wrap: wrap;
   }
   .media-card {
-    width: 200px;
+    width: 270px;
     text-align: center;
   }
   .media-art {
     background: #fffdf6;
     border: 3px solid #1a1a1a;
-    border-radius: 14px;
-    padding: 14px;
-    box-shadow: 4px 4px 0 rgba(0,0,0,0.07);
+    border-radius: 16px;
+    padding: 18px;
+    box-shadow: 5px 5px 0 rgba(0,0,0,0.07);
   }
-  .media-art svg { width: 100%; height: 120px; display: block; }
-  .media-art img { width: 100%; height: 120px; display: block; object-fit: contain; border-radius: 6px; }
+  .media-art svg { width: 100%; height: 200px; display: block; }
+  .media-art img { width: 100%; height: 200px; display: block; object-fit: contain; border-radius: 8px; }
   .media-caption {
-    margin-top: 8px;
-    font-size: 15px;
+    margin-top: 12px;
+    font-size: 18px;
     color: #4a3f2c;
     letter-spacing: 0.5px;
   }
   .points {
     background: #fffdf6;
     border: 3px solid #1a1a1a;
-    border-radius: 12px;
-    padding: 20px 28px;
+    border-radius: 14px;
+    padding: 28px 38px;
     margin: 0 6px;
-    max-width: 860px;
+    max-width: 900px;
   }
   .points ul {
     margin: 0;
-    padding-left: 24px;
-    font-size: 19px;
-    line-height: 1.6;
+    padding-left: 26px;
+    font-size: 23px;
+    line-height: 1.75;
     color: #262019;
   }
   .points .trivia {
-    margin-top: 10px;
-    padding-top: 10px;
+    margin-top: 14px;
+    padding-top: 14px;
     border-top: 1.5px dashed #c9b98f;
-    font-size: 15px;
+    font-size: 17px;
     color: #6b5d3f;
   }
 </style>
@@ -526,7 +526,7 @@ const page = await browser.newPage({
   deviceScaleFactor: 2,
 });
 
-const SPREAD_SIZE = 2; // 1ページあたりの年代数（多いと窮屈、少ないとスカスカになる）
+const SPREAD_SIZE = 1; // 1ページあたりの年代数（実写画像が入ったので1年代=1ページに戻した）
 const spreads = chunk(eras, SPREAD_SIZE);
 const total = spreads.length + 2; // 表紙 + 概説 + 年代スプレッド
 
