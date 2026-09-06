@@ -1,9 +1,11 @@
 name: Weekly Vintage Resale Report
 
 on:
-  schedule:
-    # Every Monday 09:00 JST = 00:00 UTC Monday.
-    - cron: "0 0 * * 1"
+  # Paused 2026-09 while this project is mothballed in favor of content_studio/.
+  # Uncomment to resume weekly automatic runs.
+  # schedule:
+  #   # Every Monday 09:00 JST = 00:00 UTC Monday.
+  #   - cron: "0 0 * * 1"
   workflow_dispatch:
     inputs:
       quick_test:
