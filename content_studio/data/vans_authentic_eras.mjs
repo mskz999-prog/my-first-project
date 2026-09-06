@@ -95,7 +95,7 @@ export const eras = [
     ],
     media: [
       { type: "heelPatch", caption: "ヒールパッチ", props: { label: "OFF THE WALL", sub: "MADE IN USA", fill: "#c9564a" }, photo: "heel_patches/off_the_wall.jpg" },
-      { type: "insole", caption: "インソール（®マーク入り）", props: { label: "VANS®" }, photo: "insoles/vans_r_usa.jpg" },
+      { type: "insole", caption: "インソール（無地）", props: { soft: false }, photo: "insoles/blank.jpg" },
       { type: "sideTag", caption: "サイドタグ（黒文字）", props: { label: "VANS", color: "#1a1a1a", mark: "®" }, photo: "side_tags/vans_black_r.jpg" },
       { type: "shoeSole", caption: "ソール（ワッフル）", props: { type: "waffle" }, photo: "soles/waffle_brown.jpg" },
     ],
