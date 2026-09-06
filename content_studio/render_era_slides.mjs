@@ -8,8 +8,16 @@ import { createRequire } from "node:module";
 import { eras, intro } from "./data/vans_authentic_eras.mjs";
 import { heelPatch, sideTag, sole, insole, shoeSole, storefront, skateboard } from "./lib/illustrations.mjs";
 
+// ローカル環境(npm installでnode_modulesにplaywrightが入る)と、このサンドボックス環境
+// (グローバルパスにしかplaywrightが無い)の両方で動くようにフォールバックしている。
 const require = createRequire(import.meta.url);
-const { chromium } = require("/opt/node22/lib/node_modules/playwright");
+const SANDBOX_PLAYWRIGHT = "/opt/node22/lib/node_modules/playwright";
+let chromium;
+try {
+  ({ chromium } = await import("playwright"));
+} catch {
+  ({ chromium } = require(SANDBOX_PLAYWRIGHT));
+}
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const OUT_DIR = path.join(__dirname, "output");
@@ -520,7 +528,11 @@ function chunk(arr, size) {
   return out;
 }
 
-const browser = await chromium.launch({ executablePath: "/opt/pw-browsers/chromium" });
+// サンドボックス環境ではブラウザ本体が固定パスに置かれているのでそこを指定する。
+// ローカル環境では `npx playwright install chromium` で入れた既定の場所を使うので指定しない。
+const SANDBOX_CHROMIUM = "/opt/pw-browsers/chromium";
+const launchOptions = fs.existsSync(SANDBOX_CHROMIUM) ? { executablePath: SANDBOX_CHROMIUM } : {};
+const browser = await chromium.launch(launchOptions);
 const page = await browser.newPage({
   viewport: { width: WIDTH, height: HEIGHT },
   deviceScaleFactor: 2,

@@ -1,0 +1,12 @@
+{
+  "name": "content-studio",
+  "private": true,
+  "type": "module",
+  "description": "VANSオーセンティック等の年代判別カルーセルを生成するプロトタイプ一式",
+  "scripts": {
+    "render": "node render_era_slides.mjs"
+  },
+  "dependencies": {
+    "playwright": "^1.56.1"
+  }
+}

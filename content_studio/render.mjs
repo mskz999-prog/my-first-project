@@ -6,13 +6,20 @@
 //   例) node content_studio/render.mjs vans_authentic_slide.html vans_authentic_prototype.png
 
 import path from "node:path";
+import fs from "node:fs";
 import { fileURLToPath } from "node:url";
 import { createRequire } from "node:module";
 
-// グローバルにインストールされたplaywrightパッケージを解決する
-// (このプロトタイプではプロジェクト側にpackage.jsonを増やさない方針のため)
+// ローカル環境(npm installでnode_modulesにplaywrightが入る)と、このサンドボックス環境
+// (グローバルパスにしかplaywrightが無い)の両方で動くようにフォールバックしている。
 const require = createRequire(import.meta.url);
-const { chromium } = require("/opt/node22/lib/node_modules/playwright");
+const SANDBOX_PLAYWRIGHT = "/opt/node22/lib/node_modules/playwright";
+let chromium;
+try {
+  ({ chromium } = await import("playwright"));
+} catch {
+  ({ chromium } = require(SANDBOX_PLAYWRIGHT));
+}
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -25,9 +32,11 @@ const outputPath = path.join(__dirname, "output", outputName);
 const WIDTH = 1080;
 const HEIGHT = 1350;
 
-const browser = await chromium.launch({
-  executablePath: "/opt/pw-browsers/chromium",
-});
+// サンドボックス環境ではブラウザ本体が固定パスに置かれているのでそこを指定する。
+// ローカル環境では `npx playwright install chromium` で入れた既定の場所を使うので指定しない。
+const SANDBOX_CHROMIUM = "/opt/pw-browsers/chromium";
+const launchOptions = fs.existsSync(SANDBOX_CHROMIUM) ? { executablePath: SANDBOX_CHROMIUM } : {};
+const browser = await chromium.launch(launchOptions);
 const page = await browser.newPage({
   viewport: { width: WIDTH, height: HEIGHT },
   deviceScaleFactor: 2, // 高解像度で書き出す
