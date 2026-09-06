@@ -39,8 +39,8 @@ export const eras = [
     ],
     media: [
       { type: "heelPatch", caption: "ヒールパッチ（初期）", props: { label: "VAN" }, photo: "heel_patches/van.jpg" },
-      { type: "heelPatch", caption: "ヒールパッチ（後期）", props: { label: "VAN DOREN", sub: "Made in U.S.A." }, photo: "heel_patches/van_doren.jpg" },
-      { type: "insole", caption: "インソール（無地）", props: { soft: false }, photo: "insoles/blank.jpg" },
+      { type: "heelPatch", caption: "ヒールパッチ（後期）", props: { label: "VAN DOREN", sub: "Made in U.S.A." } },
+      { type: "insole", caption: "インソール（VAN DOREN表記）", props: { label: "VAN DOREN" }, photo: "insoles/van_doren.jpg" },
       { type: "shoeSole", caption: "ソール（スリット）", props: { type: "slit" }, photo: "soles/slit_blue.jpg" },
     ],
   },
@@ -52,8 +52,8 @@ export const eras = [
       "同時にソールも茶色の「ワッフルソール」へ切り替わり、現在まで続くVANSらしいシルエットがこのあたりでほぼ固まる。",
     ],
     media: [
-      { type: "heelPatch", caption: "ヒールパッチ", props: { label: "VAN DOREN", sub: "Made in U.S.A." }, photo: "heel_patches/van_doren.jpg" },
-      { type: "insole", caption: "インソール（無地）", props: { soft: false }, photo: "insoles/blank.jpg" },
+      { type: "heelPatch", caption: "ヒールパッチ", props: { label: "VAN DOREN", sub: "Made in U.S.A." } },
+      { type: "insole", caption: "インソール（VAN DOREN表記）", props: { label: "VAN DOREN" }, photo: "insoles/van_doren.jpg" },
       { type: "sideTag", caption: "サイドタグ（青文字）", props: { label: "VANS", color: "#2c4a7c" }, photo: "side_tags/vans_blue.jpg" },
       { type: "shoeSole", caption: "ソール（ワッフル）", props: { type: "waffle" }, photo: "soles/waffle_brown.jpg" },
     ],
