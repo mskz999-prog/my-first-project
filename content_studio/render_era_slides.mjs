@@ -5,7 +5,7 @@ import path from "node:path";
 import fs from "node:fs";
 import { fileURLToPath } from "node:url";
 import { createRequire } from "node:module";
-import { eras, intro } from "./data/vans_authentic_eras.mjs";
+import { eras, summary } from "./data/vans_authentic_eras.mjs";
 import { heelPatch, sideTag, sole, insole, shoeSole, storefront, skateboard } from "./lib/illustrations.mjs";
 
 // ローカル環境(npm installでnode_modulesにplaywrightが入る)と、このサンドボックス環境
@@ -25,6 +25,9 @@ const ASSETS_DIR = path.join(__dirname, "assets");
 
 const WIDTH = 1080;
 const HEIGHT = 1350;
+const BRAND = "VINTAGE FIELD NOTES";
+const SERIES = "VANS AUTHENTIC/ERA";
+const BG = "#F4F3EF";
 
 const ILLUSTRATORS = { heelPatch, sideTag, sole, insole, shoeSole, storefront, skateboard };
 
@@ -39,8 +42,10 @@ function photoDataUri(relPath) {
   return photoDataUriCache.get(relPath);
 }
 
-// item.photo があれば実写→イラスト変換した画像(Gemini生成)をbase64埋め込みで、
-// 無ければ手描きSVGを使う(setContent経由だとfile://参照が読み込めないためdata URI化している)
+// メインタイトル用の極太コンデンストフォント（Bebas Neue）をbase64埋め込みで使う。
+// 日本語部分はグリフが無いためIPAGothicにフォールバックする。
+const BEBAS_BASE64 = fs.readFileSync(path.join(ASSETS_DIR, "fonts/BebasNeue-Regular.ttf")).toString("base64");
+
 function mediaVisual(item) {
   if (item.photo) {
     return `<img src="${photoDataUri(item.photo)}" alt="${item.caption}">`;
@@ -57,12 +62,28 @@ function mediaCardHtml(item) {
   `;
 }
 
+// 「」で囲まれた用語を太字にする（見分けポイントの用語を目立たせる）
+function emphasizeQuoted(text) {
+  return text.replace(/「([^」]+)」/g, "<strong>「$1」</strong>");
+}
+
+// 本文用の「長体（横幅を絞ったコンデンスト）」効果。タイトル（Bebas Neue使用箇所）には使わない。
+function tai(innerHtml) {
+  return `<div class="tai-wrap"><div class="tai-scale">${innerHtml}</div></div>`;
+}
+
 function sharedStyle() {
   return `
+  @font-face {
+    font-family: "Bebas Neue";
+    src: url(data:font/ttf;base64,${BEBAS_BASE64}) format("truetype");
+    font-weight: 400;
+    font-style: normal;
+  }
   html, body {
     margin: 0; padding: 0;
     width: ${WIDTH}px; height: ${HEIGHT}px;
-    background: #f4ecd8;
+    background: ${BG};
     font-family: "IPAGothic", "IPAゴシック", sans-serif;
   }
   .slide {
@@ -73,11 +94,7 @@ function sharedStyle() {
     padding: 60px 66px 44px;
     display: flex;
     flex-direction: column;
-    background:
-      radial-gradient(circle at 15% 10%, rgba(255,255,255,0.5), transparent 40%),
-      radial-gradient(circle at 85% 95%, rgba(0,0,0,0.04), transparent 45%),
-      repeating-linear-gradient(0deg, rgba(120,100,60,0.03) 0px, rgba(120,100,60,0.03) 1px, transparent 1px, transparent 3px),
-      #f4ecd8;
+    background: ${BG};
   }
   .topbar {
     display: flex;
@@ -85,307 +102,172 @@ function sharedStyle() {
     align-items: center;
   }
   .topbar .brand {
-    font-size: 18px;
-    letter-spacing: 2px;
-    color: #4a3f2c;
+    font-family: "Bebas Neue", "IPAGothic", sans-serif;
+    font-size: 20px;
+    letter-spacing: 3px;
+    color: #4a4a47;
   }
   .topbar .page {
     font-size: 16px;
-    color: #8a7a55;
-    border: 2px solid #8a7a55;
+    color: #8a8a84;
+    border: 2px solid #8a8a84;
     border-radius: 999px;
     padding: 3px 14px;
   }
-  .footer {
+  .tai-wrap { overflow: hidden; }
+  .tai-scale {
+    display: block;
+    width: 125%;
+    transform: scaleX(0.8);
+    transform-origin: left top;
+  }
+  .display-title {
+    font-family: "Bebas Neue", "IPAGothic", sans-serif;
+    font-weight: 700;
+    letter-spacing: 4px;
+  }
+  .swipe-hint {
     position: absolute;
-    left: 0; right: 0; bottom: 22px;
-    text-align: center;
-    font-size: 13px;
-    color: #8a7a55;
+    left: 66px;
+    bottom: 22px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: #262019;
+    color: #f0f0ee;
+    border-radius: 999px;
+    padding: 11px 28px;
+    font-family: "Bebas Neue", "IPAGothic", sans-serif;
+    font-size: 24px;
+    letter-spacing: 3px;
+    box-shadow: 0 8px 18px rgba(0,0,0,0.25);
+  }
+  .swipe-hint-sub {
+    position: absolute;
+    left: 66px;
+    bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #262019;
+    color: #f0f0ee;
+    border-radius: 999px;
+    padding: 9px 24px;
+    font-family: "Bebas Neue", "IPAGothic", sans-serif;
+    font-size: 21px;
+    letter-spacing: 2px;
+    box-shadow: 0 8px 18px rgba(0,0,0,0.25);
+  }
+  .flourish {
+    position: absolute;
+    right: 30px;
+    bottom: 24px;
+    font-family: Georgia, "Times New Roman", serif;
+    font-style: italic;
+    font-size: 17px;
+    color: #8a8a84;
+    letter-spacing: 0.5px;
   }
   `;
 }
 
-function coverHtml(eras, total, spreadSize) {
-  const rows = eras
-    .map((era, i) => {
-      const thumbItem = era.media[0];
-      return `
-      <div class="idx-row">
-        <div class="idx-thumb">${mediaVisual(thumbItem)}</div>
-        <div class="idx-text">
-          <div class="idx-badge">${era.range}</div>
-          <div class="idx-name">${era.name}</div>
-        </div>
-        <div class="idx-page">P.${Math.floor(i / spreadSize) + 3}</div>
-      </div>`;
-    })
-    .join("");
-
+function coverHtml(total) {
+  const heroUri = photoDataUri("covers/vans_authentic_hero.jpg");
   return `<!DOCTYPE html>
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
 <style>
   ${sharedStyle()}
-  .header { text-align: center; margin-top: 10px; }
+  .header { text-align: center; margin-top: 6px; }
   .brand-badge {
-    display: inline-block;
-    border: 3px solid #1a1a1a;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: #262019;
+    color: #f0f0ee;
     border-radius: 999px;
-    padding: 6px 26px;
-    font-size: 18px;
+    padding: 7px 26px;
+    font-family: "Bebas Neue", "IPAGothic", sans-serif;
+    font-size: 17px;
     letter-spacing: 4px;
-    color: #1a1a1a;
-    margin-bottom: 16px;
-    transform: rotate(-2deg);
+    margin-bottom: 18px;
   }
   .title {
     font-size: 84px;
-    font-weight: 900;
-    letter-spacing: 1px;
+    letter-spacing: 5px;
     color: #1a1a1a;
     margin: 0;
-    text-shadow: 3px 3px 0 rgba(0,0,0,0.08);
+    line-height: 1;
   }
   .subtitle {
-    font-size: 27px;
-    color: #4a3f2c;
-    margin-top: 10px;
-    letter-spacing: 2px;
-  }
-  .callout-row {
-    display: flex;
-    justify-content: center;
-    gap: 16px;
-    margin: 26px 0 30px;
-  }
-  .callout-chip {
-    border: 2.5px solid #1a1a1a;
-    border-radius: 999px;
-    background: #fffdf6;
-    padding: 8px 18px;
-    font-size: 18px;
-    color: #1a1a1a;
-    white-space: nowrap;
-  }
-  .callout-chip:nth-child(odd) { transform: rotate(-1.5deg); }
-  .callout-chip:nth-child(even) { transform: rotate(1.5deg); }
-  .hero {
-    margin: 0 auto 34px;
-    width: 780px;
-    height: 220px;
-    border: 3px dashed #8a7a55;
-    border-radius: 18px;
-    background: rgba(255,255,255,0.35);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 20px;
-    color: #6b5d3f;
-  }
-  .hero svg { width: 110px; height: 110px; opacity: 0.55; flex: none; }
-  .hero .hero-text { text-align: left; }
-  .hero .hero-label { font-size: 22px; letter-spacing: 1px; }
-  .hero .hero-sub { font-size: 15px; color: #8a7a55; margin-top: 4px; }
-  .index {
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
-    margin: 0 8px;
-  }
-  .idx-row {
-    display: flex;
-    align-items: center;
-    gap: 18px;
-    background: #fffdf6;
-    border: 2.5px solid #1a1a1a;
-    border-radius: 12px;
-    padding: 16px 26px;
-  }
-  .idx-row:nth-child(odd) { transform: rotate(-0.4deg); }
-  .idx-row:nth-child(even) { transform: rotate(0.4deg); }
-  .idx-thumb {
-    width: 64px;
-    height: 64px;
-    flex: none;
-    border: 2px solid #1a1a1a;
-    border-radius: 10px;
-    background: #f4ecd8;
-    padding: 6px;
-    box-sizing: border-box;
-  }
-  .idx-thumb svg { width: 100%; height: 100%; display: block; }
-  .idx-thumb img { width: 100%; height: 100%; display: block; object-fit: contain; border-radius: 4px; }
-  .idx-text { flex: 1; }
-  .idx-badge {
-    display: inline-block;
-    background: #1a1a1a;
-    color: #f4ecd8;
-    font-size: 16px;
-    font-weight: 700;
-    padding: 4px 14px;
-    border-radius: 7px;
-    white-space: nowrap;
-    margin-bottom: 6px;
-  }
-  .idx-name {
-    font-size: 24px;
+    font-size: 29px;
     font-weight: 700;
     color: #262019;
+    margin-top: 20px;
+    letter-spacing: 1px;
   }
-  .idx-page {
-    font-size: 16px;
-    color: #8a7a55;
+  .hero-frame {
+    margin: 24px auto 20px;
+    width: 100%;
+    max-width: 900px;
+    aspect-ratio: 1263 / 848;
+    border-radius: 18px;
+    overflow: hidden;
+    box-shadow: 0 18px 34px rgba(0,0,0,0.18);
+    background: #fffdf6;
+  }
+  .hero-frame img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+  }
+  .overview {
+    background: #fffdf6;
+    border: 1.5px solid #262019;
+    border-radius: 16px;
+    padding: 24px 30px;
+    margin: 0 6px;
+  }
+  .overview-heading {
+    font-size: 21px;
+    font-weight: 700;
+    color: #262019;
+    margin-bottom: 14px;
+  }
+  .overview ul strong { font-weight: 700; }
+  .overview ul {
+    margin: 0;
+    padding-left: 26px;
+    font-size: 24px;
+    line-height: 1.7;
+    color: #262019;
   }
 </style>
 </head>
 <body>
   <div class="slide">
     <div class="topbar">
-      <div class="brand">古着デジタル図鑑</div>
+      <div class="brand">${BRAND} ・ ${SERIES}</div>
       <div class="page">1 / ${total}</div>
     </div>
     <div class="header">
-      <div class="brand-badge">年代判別 完全ガイド</div>
-      <h1 class="title">VANS AUTHENTIC</h1>
-      <div class="subtitle">〜 6つの年代で見分けるチェックポイント 〜</div>
+      <div class="brand-badge">MODEL &amp; ERA GUIDE</div>
+      <h1 class="title display-title">${SERIES}</h1>
+      <div class="subtitle">${tai("年代別ディテール変遷のハイライト")}</div>
     </div>
-    <div class="callout-row">
-      <div class="callout-chip">ヒールパッチ</div>
-      <div class="callout-chip">ソール</div>
-      <div class="callout-chip">サイドタグ</div>
-      <div class="callout-chip">インソール</div>
+    <div class="hero-frame"><img src="${heroUri}" alt="VANS AUTHENTIC"></div>
+    <div class="overview">
+      <div class="overview-heading">概要：VANSの歴史を紡ぐ原点モデル</div>
+      ${tai(`<ul>
+        <li>${emphasizeQuoted("1966年、カリフォルニア州アナハイムで誕生。設立時「Style #44」として登場し、後に「Authentic」と呼ばれるようになるVANS最古のアイコン。")}</li>
+        <li>${emphasizeQuoted("1976年には、Z-Boysのトニー・アルヴァやステイシー・ペラルタらとの協力でデザインされたとされる「ERA」(Style #95)も登場。")}</li>
+        <li>${emphasizeQuoted("ヒールパッチ・インソール表記・ソール形状の変遷は両モデルに共通。年代を見分けるポイントを解説。")}</li>
+      </ul>`)}
     </div>
-    <div class="hero">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2">
-        <path d="M2 17c1-2 2-3 4-3.2 1.5-1.6 3.5-2.4 5.5-2.3 1-1.3 3-2 5-1.6 1.7.3 3 1.6 3.5 3.3.4 1.4 1 1.8 2 2.3v2.5H2v-1z"/>
-        <path d="M6 13.8c.5-1.2 1.4-2 2.5-2.3"/>
-      </svg>
-      <div class="hero-text">
-        <div class="hero-label">実物写真 / イラスト 挿入エリア</div>
-        <div class="hero-sub">(シリーズ全体を象徴する1枚をここに)</div>
-      </div>
-    </div>
-    <div class="index">${rows}</div>
-    <div class="footer">※ 古着専門ブログの記述を照合した参考情報です。詳しい判別ポイントは次のページから。</div>
-  </div>
-</body>
-</html>`;
-}
-
-function introHtml(intro, index, total) {
-  const sectionsHtml = intro.sections
-    .map((s) => {
-      const iconSvg = ILLUSTRATORS[s.icon]();
-      return `
-      <div class="intro-block">
-        <div class="intro-icon">${iconSvg}</div>
-        <div class="intro-text">
-          <div class="intro-label">${s.label}</div>
-          <p class="intro-paragraph">${s.paragraph}</p>
-        </div>
-      </div>`;
-    })
-    .join("");
-
-  return `<!DOCTYPE html>
-<html lang="ja">
-<head>
-<meta charset="UTF-8">
-<style>
-  ${sharedStyle()}
-  .intro-header { text-align: center; margin: 6px 0 30px; }
-  .intro-eyebrow {
-    display: inline-block;
-    border: 3px solid #1a1a1a;
-    border-radius: 999px;
-    padding: 5px 22px;
-    font-size: 16px;
-    letter-spacing: 3px;
-    color: #1a1a1a;
-    margin-bottom: 14px;
-    transform: rotate(-1.5deg);
-  }
-  .intro-heading {
-    font-size: 38px;
-    font-weight: 900;
-    color: #1a1a1a;
-    margin: 0;
-    line-height: 1.4;
-    text-shadow: 2px 2px 0 rgba(0,0,0,0.08);
-  }
-  .intro-body {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    gap: 34px;
-    overflow: hidden;
-  }
-  .intro-block {
-    display: flex;
-    align-items: center;
-    gap: 26px;
-    background: #fffdf6;
-    border: 3px solid #1a1a1a;
-    border-radius: 14px;
-    padding: 28px 34px;
-  }
-  .intro-icon {
-    flex: none;
-    width: 130px;
-    height: 130px;
-    border: 2.5px dashed #8a7a55;
-    border-radius: 12px;
-    padding: 14px;
-    box-sizing: border-box;
-    background: rgba(0,0,0,0.02);
-  }
-  .intro-icon svg { width: 100%; height: 100%; display: block; }
-  .intro-text { flex: 1; }
-  .intro-label {
-    display: inline-block;
-    background: #1a1a1a;
-    color: #f4ecd8;
-    font-size: 16px;
-    font-weight: 700;
-    padding: 5px 16px;
-    border-radius: 6px;
-    margin-bottom: 16px;
-    letter-spacing: 0.5px;
-  }
-  .intro-paragraph {
-    margin: 0;
-    font-size: 22px;
-    line-height: 1.95;
-    color: #262019;
-  }
-  .intro-closing {
-    font-size: 18px;
-    line-height: 1.8;
-    color: #4a3f2c;
-    padding: 0 10px;
-    border-top: 1.5px dashed #c9b98f;
-    padding-top: 20px;
-  }
-</style>
-</head>
-<body>
-  <div class="slide">
-    <div class="topbar">
-      <div class="brand">古着デジタル図鑑 ・ VANS AUTHENTIC</div>
-      <div class="page">${index} / ${total}</div>
-    </div>
-    <div class="intro-header">
-      <div class="intro-eyebrow">${intro.eyebrow}</div>
-      <h1 class="intro-heading">${intro.heading}</h1>
-    </div>
-    <div class="intro-body">
-      ${sectionsHtml}
-      <div class="intro-closing">${intro.closing}</div>
-    </div>
-    <div class="footer">※ Wikipedia・vans.com公式ヒストリー・MR PORTER等を横断して作成した参考情報です。一部エピソードは各情報源が"伝承"として紹介している内容です。</div>
+    <div class="swipe-hint">SWIPE FOR DETAILS <span class="arrow">→</span></div>
+    <div class="flourish">${SERIES}</div>
   </div>
 </body>
 </html>`;
@@ -393,19 +275,28 @@ function introHtml(intro, index, total) {
 
 function eraSectionHtml(era) {
   const mediaHtml = era.media.map(mediaCardHtml).join("");
-  const bulletsHtml = era.bullets.map((b) => `<li>${b}</li>`).join("");
+  const bulletsHtml = era.bullets.map((b) => `<li>${emphasizeQuoted(b)}</li>`).join("");
   const triviaHtml = era.trivia ? `<div class="trivia">${era.trivia}</div>` : "";
   return `
     <div class="era-section">
       <div class="era-heading">
-        <div class="era-badge">${era.range}</div>
-        <h2 class="era-name">${era.name}</h2>
+        <h2 class="era-name display-title">${era.name}</h2>
+        <div class="era-divider">
+          <span class="era-divider-line"></span>
+          <span class="era-badge">${era.range}</span>
+          <span class="era-divider-line"></span>
+        </div>
       </div>
       <div class="media-row">${mediaHtml}</div>
       <div class="points">
-        <ul>${bulletsHtml}</ul>
+        <div class="points-heading">
+          <span class="points-label">CHECK POINT</span>
+          <span class="points-line"></span>
+        </div>
+        ${tai(`<ul>${bulletsHtml}</ul>`)}
         ${triviaHtml}
       </div>
+      <div class="era-flourish">${SERIES}</div>
     </div>
   `;
 }
@@ -428,95 +319,320 @@ function spreadHtml(erasGroup, index, total) {
     flex-direction: column;
   }
   .era-section {
+    position: relative;
     flex: 1;
     display: flex;
     flex-direction: column;
-    justify-content: center;
     align-items: center;
+    justify-content: center;
+    padding: 18px 10px 40px;
   }
   .divider {
     width: 100%;
     border: none;
-    border-top: 2.5px dashed #c9b98f;
+    border-top: 2.5px dashed #c8c8c2;
     margin: 6px 0;
   }
-  .era-heading { text-align: center; margin-bottom: 36px; }
-  .era-badge {
-    display: inline-block;
-    background: #1a1a1a;
-    color: #f4ecd8;
-    font-size: 24px;
-    font-weight: 700;
-    padding: 6px 24px;
-    border-radius: 8px;
-    letter-spacing: 0.5px;
-    transform: rotate(-1.2deg);
-  }
+  .era-heading { text-align: center; width: 100%; margin-bottom: 34px; }
   .era-name {
     font-size: 50px;
-    font-weight: 900;
-    color: #1a1a1a;
-    margin: 16px 0 0;
-    text-shadow: 2px 2px 0 rgba(0,0,0,0.08);
+    color: #262019;
+    margin: 0;
+  }
+  .era-divider {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 18px;
+    margin-top: 24px;
+  }
+  .era-divider-line {
+    flex: 1;
+    max-width: 230px;
+    height: 2px;
+    background: #3a332a;
+    opacity: 0.35;
+  }
+  .era-badge {
+    display: inline-block;
+    background: #262019;
+    color: #f0f0ee;
+    font-size: 21px;
+    font-weight: 700;
+    padding: 6px 22px;
+    border-radius: 8px;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
   }
   .media-row {
     display: flex;
     justify-content: center;
-    gap: 18px;
-    margin-bottom: 36px;
-    flex-wrap: wrap;
+    gap: 14px;
+    margin-bottom: 34px;
+    flex-wrap: nowrap;
   }
   .media-card {
-    width: 210px;
+    width: 205px;
     text-align: center;
   }
   .media-art {
-    background: #fffdf6;
-    border: 3px solid #1a1a1a;
-    border-radius: 14px;
-    padding: 14px;
-    box-shadow: 4px 4px 0 rgba(0,0,0,0.07);
+    background: #b3afa4;
+    border: 1.5px solid #1a1a1a;
+    border-radius: 10px;
+    padding: 8px;
+    height: 150px;
+    box-sizing: content-box;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
   }
-  .media-art svg { width: 100%; height: 150px; display: block; }
-  .media-art img { width: 100%; height: 150px; display: block; object-fit: contain; border-radius: 7px; }
+  .media-art svg { max-width: 92%; max-height: 92%; display: block; }
+  .media-art img { max-width: 92%; max-height: 92%; display: block; object-fit: contain; border-radius: 4px; }
   .media-caption {
     margin-top: 10px;
     font-size: 15px;
-    color: #4a3f2c;
+    color: #4a4a47;
     letter-spacing: 0.3px;
   }
   .points {
     background: #fffdf6;
-    border: 3px solid #1a1a1a;
-    border-radius: 14px;
-    padding: 28px 38px;
+    border: 1.5px solid #262019;
+    border-radius: 16px;
+    padding: 26px 32px;
     margin: 0 6px;
-    max-width: 900px;
+    max-width: 920px;
+    width: 100%;
+    box-sizing: border-box;
+  }
+  .points-heading {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 14px;
+  }
+  .points-label {
+    font-family: "Bebas Neue", "IPAGothic", sans-serif;
+    font-size: 21px;
+    letter-spacing: 3px;
+    color: #262019;
+    white-space: nowrap;
+  }
+  .points-line {
+    flex: 1;
+    height: 2px;
+    background: #262019;
+    opacity: 0.25;
   }
   .points ul {
     margin: 0;
     padding-left: 26px;
-    font-size: 23px;
-    line-height: 1.75;
+    font-size: 24px;
+    line-height: 1.7;
     color: #262019;
   }
+  .points ul strong { font-weight: 700; }
   .points .trivia {
     margin-top: 14px;
     padding-top: 14px;
-    border-top: 1.5px dashed #c9b98f;
+    border-top: 1.5px dashed #c8c8c2;
     font-size: 17px;
-    color: #6b5d3f;
+    color: #6b6b66;
+  }
+  .era-flourish {
+    position: absolute;
+    right: 26px;
+    bottom: 6px;
+    font-family: Georgia, "Times New Roman", serif;
+    font-style: italic;
+    font-size: 17px;
+    color: #8a8a84;
+    letter-spacing: 0.5px;
   }
 </style>
 </head>
 <body>
   <div class="slide">
     <div class="topbar">
-      <div class="brand">古着デジタル図鑑 ・ VANS AUTHENTIC</div>
+      <div class="brand">${BRAND} ・ ${SERIES}</div>
       <div class="page">${index} / ${total}</div>
     </div>
     <div class="content">${sectionsHtml}</div>
-    <div class="footer">※ 古着専門ブログの記述を照合した参考情報です。個体差があるため実物での確認を推奨します。イラストは参考図です。</div>
+    <div class="swipe-hint-sub">SWIPE →</div>
+  </div>
+</body>
+</html>`;
+}
+
+// カルーセル最後の「まとめ」ページ：6年代の早見表（左＝年代情報／右＝4項目のディテール写真）＋ CTA。
+function summaryHtml(erasList, summaryData, index, total) {
+  const rows = erasList
+    .map((era, i) => {
+      const thumbsHtml = era.media
+        .map((item) => `<div class="idx-thumb">${mediaVisual(item)}</div>`)
+        .join("");
+      return `
+      <div class="idx-row">
+        <div class="idx-left">
+          <div class="idx-num">${i + 1}</div>
+          <div class="idx-text">
+            <div class="idx-badge">${era.range}</div>
+            <div class="idx-name">${era.name}</div>
+          </div>
+        </div>
+        <div class="idx-thumbs">${thumbsHtml}</div>
+      </div>`;
+    })
+    .join("");
+
+  return `<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<style>
+  ${sharedStyle()}
+  .summary-header { text-align: center; margin: 6px 0 24px; }
+  .summary-eyebrow {
+    display: inline-block;
+    border: 2px solid #262019;
+    border-radius: 999px;
+    padding: 5px 22px;
+    font-family: "Bebas Neue", "IPAGothic", sans-serif;
+    font-size: 17px;
+    letter-spacing: 4px;
+    color: #262019;
+    margin-bottom: 16px;
+  }
+  .summary-heading {
+    font-size: 46px;
+    color: #1a1a1a;
+    margin: 0;
+  }
+  .index {
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+    margin: 0 4px;
+  }
+  .idx-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    background: #fffdf6;
+    border-radius: 14px;
+    padding: 10px 22px;
+    box-shadow: 0 10px 22px rgba(0,0,0,0.10);
+  }
+  .idx-left {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex: none;
+    width: 280px;
+  }
+  .idx-num {
+    width: 28px;
+    height: 28px;
+    flex: none;
+    border-radius: 7px;
+    background: #b23b30;
+    color: #fff6ee;
+    font-size: 14px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .idx-badge {
+    display: inline-block;
+    background: #262019;
+    color: #f0f0ee;
+    font-size: 13px;
+    font-weight: 700;
+    padding: 2px 11px;
+    border-radius: 6px;
+    white-space: nowrap;
+    margin-bottom: 5px;
+  }
+  .idx-name {
+    font-size: 18px;
+    font-weight: 700;
+    color: #262019;
+    line-height: 1.25;
+  }
+  .idx-thumbs {
+    display: flex;
+    gap: 10px;
+    flex: none;
+  }
+  .idx-thumb {
+    width: 108px;
+    height: 108px;
+    flex: none;
+    border-radius: 10px;
+    background: #b3afa4;
+    padding: 6px;
+    box-sizing: border-box;
+    border: 1.5px solid #1a1a1a;
+  }
+  .idx-thumb svg { width: 100%; height: 100%; display: block; }
+  .idx-thumb img { width: 100%; height: 100%; display: block; object-fit: contain; border-radius: 3px; }
+  .cta {
+    margin-top: 26px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    align-items: center;
+  }
+  .cta-chips {
+    display: flex;
+    gap: 14px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  .cta-chip {
+    display: inline-flex;
+    align-items: center;
+    background: #262019;
+    color: #f0f0ee;
+    border-radius: 12px;
+    padding: 18px 34px;
+    font-family: "Bebas Neue", "IPAGothic", sans-serif;
+    font-size: 26px;
+    letter-spacing: 2px;
+    white-space: nowrap;
+  }
+  .save-icon {
+    width: 24px;
+    height: 24px;
+    vertical-align: -6px;
+  }
+  .cta-note {
+    margin: 6px 0 0;
+    font-size: 16px;
+    color: #6b6b66;
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+  <div class="slide">
+    <div class="topbar">
+      <div class="brand">${BRAND} ・ ${SERIES}</div>
+      <div class="page">${index} / ${total}</div>
+    </div>
+    <div class="summary-header">
+      <div class="summary-eyebrow">SUMMARY</div>
+      <h1 class="summary-heading display-title">${summaryData.heading}</h1>
+    </div>
+    <div class="index">${rows}</div>
+    <div class="cta">
+      <div class="cta-chips">
+        <div class="cta-chip">[&nbsp;<svg class="save-icon" viewBox="0 0 24 24" fill="none" stroke="#f0f0ee" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>&nbsp;DON'T FORGET TO SAVE&nbsp;]</div>
+      </div>
+    </div>
+    <div class="flourish">${SERIES}</div>
   </div>
 </body>
 </html>`;
@@ -538,26 +654,32 @@ const page = await browser.newPage({
   deviceScaleFactor: 2,
 });
 
-const SPREAD_SIZE = 1; // 1ページあたりの年代数（実写画像が入ったので1年代=1ページに戻した）
-const spreads = chunk(eras, SPREAD_SIZE);
-const total = spreads.length + 2; // 表紙 + 概説 + 年代スプレッド
+// 既存の出力ファイルを一掃してから作り直す（ページ構成が変わり枚数・番号がズレるため）
+for (const f of fs.readdirSync(OUT_DIR)) {
+  if (f.startsWith("vans_authentic_carousel_")) fs.unlinkSync(path.join(OUT_DIR, f));
+}
 
-await page.setContent(coverHtml(eras, total, SPREAD_SIZE), { waitUntil: "load" });
+const SPREAD_SIZE = 1; // 1ページあたりの年代数
+const spreads = chunk(eras, SPREAD_SIZE);
+const total = spreads.length + 2; // 表紙 + 年代スプレッド + まとめ
+
+await page.setContent(coverHtml(total), { waitUntil: "load" });
 const coverPath = path.join(OUT_DIR, "vans_authentic_carousel_01_cover.png");
 await page.screenshot({ path: coverPath, clip: { x: 0, y: 0, width: WIDTH, height: HEIGHT } });
 console.log(`Saved: ${coverPath}`);
 
-await page.setContent(introHtml(intro, 2, total), { waitUntil: "load" });
-const introPath = path.join(OUT_DIR, "vans_authentic_carousel_02_intro.png");
-await page.screenshot({ path: introPath, clip: { x: 0, y: 0, width: WIDTH, height: HEIGHT } });
-console.log(`Saved: ${introPath}`);
-
 for (let i = 0; i < spreads.length; i++) {
-  const html = spreadHtml(spreads[i], i + 3, total);
+  const html = spreadHtml(spreads[i], i + 2, total);
   await page.setContent(html, { waitUntil: "load" });
-  const outPath = path.join(OUT_DIR, `vans_authentic_carousel_${String(i + 3).padStart(2, "0")}.png`);
+  const outPath = path.join(OUT_DIR, `vans_authentic_carousel_${String(i + 2).padStart(2, "0")}.png`);
   await page.screenshot({ path: outPath, clip: { x: 0, y: 0, width: WIDTH, height: HEIGHT } });
   console.log(`Saved: ${outPath}`);
 }
+
+const summaryIndex = spreads.length + 2;
+await page.setContent(summaryHtml(eras, summary, summaryIndex, total), { waitUntil: "load" });
+const summaryPath = path.join(OUT_DIR, `vans_authentic_carousel_${String(summaryIndex).padStart(2, "0")}_summary.png`);
+await page.screenshot({ path: summaryPath, clip: { x: 0, y: 0, width: WIDTH, height: HEIGHT } });
+console.log(`Saved: ${summaryPath}`);
 
 await browser.close();

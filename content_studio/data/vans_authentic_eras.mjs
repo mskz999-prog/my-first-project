@@ -13,20 +13,21 @@ export const intro = {
   heading: "すべての始まりは、飾り気のない1足だった",
   sections: [
     {
-      label: "起源：1966年、アナハイムの小さな工場",
+      label: "起源から、スケートカルチャーの定番へ",
       icon: "storefront",
       paragraph:
-        "1966年3月、ポール・ヴァンドーレンと兄ジェームズ、共同創業者のゴードン・リー、サージ・デリアの4人が、カリフォルニア州アナハイムに「The Van Doren Rubber Company」を創業。工場と直営店を同じ建物に構え、注文を受けたその日のうちに靴を仕上げて手渡すという、当時としては珍しいスタイルで営業をスタートした。最初に作られたのが後の「Authentic」、社内呼称「Style #44」——キャンバスアッパーに厚手のゴムソールを合わせただけの、飾り気のない一足だった。",
-    },
-    {
-      label: "接続：南カリフォルニアのスケートカルチャーへ",
-      icon: "skateboard",
-      paragraph:
-        "ブランド側が意図したわけではなく、1970年代前半に南カリフォルニアのスケーターたちがこの靴のグリップ力と足への馴染みやすさに目をつけ、独自に愛用し始めたのがVANSとスケートカルチャーの出会い。Z-Boysと呼ばれたZephyrチームのトニー・アルヴァやステイシー・ペラルタらが履きこなし、1976年には初の本格的なスケートシューズが誕生、「OFF THE WALL」のロゴが生まれた（アルヴァがプールの壁を飛び越えるトリックを決めたことに由来すると伝えられている）。翌77年のチェッカーボード柄は映画『初体験/リッジモント・ハイ』などを通じてポップカルチャーのアイコンとなり、パンク〜スケート〜ストリートへとVANSは越境していく。",
+        "1966年、ポール・ヴァンドーレンらがカリフォルニア州アナハイムに「The Van Doren Rubber Company」を創業。最初に作られたのが後の「Authentic」、社内呼称「Style #44」だった。1970年代、南カリフォルニアのスケーターたちがこの靴を愛用し始めたことをきっかけに、VANSとスケートカルチャーの結びつきが生まれていく。",
     },
   ],
   closing:
-    "つまりディテールの変遷を辿ることは、そのままVANSがどうカルチャーと共に育っていったかを辿ることでもある。次のページから、その「証拠」となるヒールパッチ・サイドタグ・ソールの違いを見ていこう。",
+    "次のページから、ヒールパッチ・サイドタグ・ソールの違いを年代ごとに見ていこう。",
+};
+
+// カルーセル最後の「まとめ」ページ用データ。各年代の早見表として使う。
+export const summary = {
+  heading: "ディテール早見ガイド",
+  closing:
+    "保存して、古着屋やフリマアプリでチェックする時のお供にどうぞ。次回はアイテム・ブランド紹介も予定しています。",
 };
 
 export const eras = [
@@ -39,7 +40,7 @@ export const eras = [
     ],
     media: [
       { type: "heelPatch", caption: "ヒールパッチ（初期）", props: { label: "VAN" }, photo: "heel_patches/van.jpg" },
-      { type: "heelPatch", caption: "ヒールパッチ（後期）", props: { label: "VAN DOREN", sub: "Made in U.S.A." } },
+      { type: "heelPatch", caption: "ヒールパッチ（後期）", props: { label: "VAN DOREN", sub: "Made in U.S.A." }, photo: "heel_patches/van_doren.jpg" },
       { type: "insole", caption: "インソール（VAN DOREN表記）", props: { label: "VAN DOREN" }, photo: "insoles/van_doren.jpg" },
       { type: "shoeSole", caption: "ソール（スリット）", props: { type: "slit" }, photo: "soles/slit_blue.jpg" },
     ],
@@ -52,8 +53,8 @@ export const eras = [
       "同時にソールも茶色の「ワッフルソール」へ切り替わり、現在まで続くVANSらしいシルエットがこのあたりでほぼ固まる。",
     ],
     media: [
-      { type: "heelPatch", caption: "ヒールパッチ", props: { label: "VAN DOREN", sub: "Made in U.S.A." } },
-      { type: "insole", caption: "インソール（VAN DOREN表記）", props: { label: "VAN DOREN" }, photo: "insoles/van_doren.jpg" },
+      { type: "heelPatch", caption: "ヒールパッチ", props: { label: "VAN DOREN", sub: "Made in U.S.A." }, photo: "heel_patches/van_doren.jpg" },
+      { type: "insole", caption: "インソール（VANS表記）", props: { label: "VANS" }, photo: "insoles/vans_usa.jpg" },
       { type: "sideTag", caption: "サイドタグ（青文字）", props: { label: "VANS", color: "#2c4a7c" }, photo: "side_tags/vans_blue.jpg" },
       { type: "shoeSole", caption: "ソール（ワッフル）", props: { type: "waffle" }, photo: "soles/waffle_brown.jpg" },
     ],
@@ -66,7 +67,7 @@ export const eras = [
       "Z-Boysのトニー・アルヴァらが実際に履いていた時期と重なるため、ヴィンテージ古着として特に人気が高い年代のひとつとされる。サイドタグは引き続き青文字の「VANS」。",
     ],
     media: [
-      { type: "heelPatch", caption: "ヒールパッチ", props: { label: "OFF THE WALL", sub: "T.M.", fill: "#c9564a" }, photo: "heel_patches/off_the_wall.jpg" },
+      { type: "heelPatch", caption: "ヒールパッチ", props: { label: "OFF THE WALL", sub: "T.M.", fill: "#c9564a" }, photo: "heel_patches/off_the_wall_tm.jpg" },
       { type: "insole", caption: "インソール（VANS表記）", props: { label: "VANS" }, photo: "insoles/vans_usa.jpg" },
       { type: "sideTag", caption: "サイドタグ（青文字）", props: { label: "VANS", color: "#2c4a7c" }, photo: "side_tags/vans_blue.jpg" },
       { type: "shoeSole", caption: "ソール（ワッフル）", props: { type: "waffle" }, photo: "soles/waffle_brown.jpg" },
@@ -80,8 +81,8 @@ export const eras = [
       "一方でサイドタグは青文字のまま「VANS®」に、®（登録商標）マークが新たに加わるのがこの年代を見分ける一番のポイントになる。",
     ],
     media: [
-      { type: "heelPatch", caption: "ヒールパッチ", props: { label: "OFF THE WALL", sub: "T.M.", fill: "#c9564a" }, photo: "heel_patches/off_the_wall.jpg" },
-      { type: "insole", caption: "インソール（®マーク入り）", props: { label: "VANS®" }, photo: "insoles/vans_r_usa.jpg" },
+      { type: "heelPatch", caption: "ヒールパッチ", props: { label: "OFF THE WALL", sub: "T.M.", fill: "#c9564a" }, photo: "heel_patches/off_the_wall_tm.jpg" },
+      { type: "insole", caption: "インソール（VANS表記）", props: { label: "VANS" }, photo: "insoles/vans_usa.jpg" },
       { type: "sideTag", caption: "サイドタグ（青文字＋®）", props: { label: "VANS", color: "#2c4a7c", mark: "®" }, photo: "side_tags/vans_blue_r.jpg" },
       { type: "shoeSole", caption: "ソール（ワッフル）", props: { type: "waffle" }, photo: "soles/waffle_brown.jpg" },
     ],
@@ -102,16 +103,16 @@ export const eras = [
   },
   {
     range: "90s中期",
-    name: "海外生産シフト期",
+    name: "米国最終期",
     bullets: [
-      "見た目自体はひとつ前の年代とほぼ変わらないが、この時期を境に生産拠点がアメリカからアジア圏へと徐々に移っていく。",
-      "後年、ヒールパッチの「Made in U.S.A.」表記そのものが消えていくのは、この生産シフトの延長線上にある変化として理解できる。",
+      "見た目自体はひとつ前の年代とほぼ変わらないが、1993年には既に韓国での生産が始まっており、1995年にはカリフォルニア州オレンジの自社工場も閉鎖。この頃がアメリカ国内生産の終盤にあたる。",
+      "1990年代末までには生産のほとんどがアジア圏へ移行し、ヒールパッチに「Made in U.S.A.」の表記が見られるのはこのあたりが最後となる。",
     ],
     media: [
       { type: "heelPatch", caption: "ヒールパッチ", props: { label: "OFF THE WALL", sub: "MADE IN USA", fill: "#c9564a" }, photo: "heel_patches/off_the_wall.jpg" },
-      { type: "insole", caption: "インソール（®マーク入り）", props: { label: "VANS®" }, photo: "insoles/vans_r_usa.jpg" },
+      { type: "insole", caption: "インソール", props: { label: "VANS®" }, photo: "insoles/vans_r_usa.jpg" },
       { type: "sideTag", caption: "サイドタグ（黒文字）", props: { label: "VANS", color: "#1a1a1a", mark: "®" }, photo: "side_tags/vans_black_r.jpg" },
-      { type: "shoeSole", caption: "ソール（ワッフル・柔らか）", props: { type: "waffle" }, photo: "soles/waffle_brown.jpg" },
+      { type: "shoeSole", caption: "ソール（ワッフル）", props: { type: "waffle" }, photo: "soles/waffle_brown.jpg" },
     ],
   },
 ];
