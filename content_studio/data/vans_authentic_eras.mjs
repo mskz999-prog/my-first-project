@@ -30,6 +30,25 @@ export const summary = {
     "保存して、古着屋やフリマアプリでチェックする時のお供にどうぞ。次回はアイテム・ブランド紹介も予定しています。",
 };
 
+// render_era_slides.mjs（汎用エンジン）に渡すブランド・表紙まわりの設定。
+// 新しいトピックを作る際は、この形のmetaを持つ data/<topic>.mjs を用意すればよい。
+export const meta = {
+  brand: "VINTAGE FIELD NOTES",
+  series: "VANS AUTHENTIC/ERA",
+  outputPrefix: "vans_authentic_carousel",
+  bg: "#F4F3EF",
+  heroImage: "covers/vans_authentic_hero.jpg",
+  heroAlt: "VANS AUTHENTIC",
+  badge: "MODEL & ERA GUIDE",
+  subtitle: "年代別ディテール変遷のハイライト",
+  overviewHeading: "概要：VANSの歴史を紡ぐ原点モデル",
+  overviewBullets: [
+    "1966年、カリフォルニア州アナハイムで誕生。設立時「Style #44」として登場し、後に「Authentic」と呼ばれるようになるVANS最古のアイコン。",
+    "1976年には、Z-Boysのトニー・アルヴァやステイシー・ペラルタらとの協力でデザインされたとされる「ERA」(Style #95)も登場。",
+    "ヒールパッチ・インソール表記・ソール形状の変遷は両モデルに共通。年代を見分けるポイントを解説。",
+  ],
+};
+
 export const eras = [
   {
     range: "66〜70s初期",

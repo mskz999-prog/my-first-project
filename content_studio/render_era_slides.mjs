@@ -1,12 +1,17 @@
-// 年代ごとのカルーセルスライド（1080x1350）を、イラスト付きで一括生成する。
-// 使い方: node content_studio/render_era_slides.mjs
+// 年代ごとのカルーセルスライド（1080x1350）を、イラスト付きで一括生成する汎用エンジン。
+// データファイル（data/<topic>.mjs）が range/name/bullets/media の型と meta を満たしていれば、
+// 対象を変えて使い回せる。
+// 使い方: node content_studio/render_era_slides.mjs [topic]
+//   topic省略時は "vans_authentic_eras"（= data/vans_authentic_eras.mjs）を使う。
 
 import path from "node:path";
 import fs from "node:fs";
 import { fileURLToPath } from "node:url";
 import { createRequire } from "node:module";
-import { eras, summary } from "./data/vans_authentic_eras.mjs";
 import { heelPatch, sideTag, sole, insole, shoeSole, storefront, skateboard } from "./lib/illustrations.mjs";
+
+const TOPIC = process.argv[2] || "vans_authentic_eras";
+const { eras, summary, meta } = await import(`./data/${TOPIC}.mjs`);
 
 // ローカル環境(npm installでnode_modulesにplaywrightが入る)と、このサンドボックス環境
 // (グローバルパスにしかplaywrightが無い)の両方で動くようにフォールバックしている。
@@ -25,9 +30,9 @@ const ASSETS_DIR = path.join(__dirname, "assets");
 
 const WIDTH = 1080;
 const HEIGHT = 1350;
-const BRAND = "VINTAGE FIELD NOTES";
-const SERIES = "VANS AUTHENTIC/ERA";
-const BG = "#F4F3EF";
+const BRAND = meta.brand;
+const SERIES = meta.series;
+const BG = meta.bg || "#F4F3EF";
 
 const ILLUSTRATORS = { heelPatch, sideTag, sole, insole, shoeSole, storefront, skateboard };
 
@@ -172,7 +177,8 @@ function sharedStyle() {
 }
 
 function coverHtml(total) {
-  const heroUri = photoDataUri("covers/vans_authentic_hero.jpg");
+  const heroUri = photoDataUri(meta.heroImage);
+  const overviewBulletsHtml = meta.overviewBullets.map((b) => `<li>${emphasizeQuoted(b)}</li>`).join("");
   return `<!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -253,18 +259,14 @@ function coverHtml(total) {
       <div class="page">1 / ${total}</div>
     </div>
     <div class="header">
-      <div class="brand-badge">MODEL &amp; ERA GUIDE</div>
+      <div class="brand-badge">${meta.badge}</div>
       <h1 class="title display-title">${SERIES}</h1>
-      <div class="subtitle">${tai("年代別ディテール変遷のハイライト")}</div>
+      <div class="subtitle">${tai(meta.subtitle)}</div>
     </div>
-    <div class="hero-frame"><img src="${heroUri}" alt="VANS AUTHENTIC"></div>
+    <div class="hero-frame"><img src="${heroUri}" alt="${meta.heroAlt || SERIES}"></div>
     <div class="overview">
-      <div class="overview-heading">概要：VANSの歴史を紡ぐ原点モデル</div>
-      ${tai(`<ul>
-        <li>${emphasizeQuoted("1966年、カリフォルニア州アナハイムで誕生。設立時「Style #44」として登場し、後に「Authentic」と呼ばれるようになるVANS最古のアイコン。")}</li>
-        <li>${emphasizeQuoted("1976年には、Z-Boysのトニー・アルヴァやステイシー・ペラルタらとの協力でデザインされたとされる「ERA」(Style #95)も登場。")}</li>
-        <li>${emphasizeQuoted("ヒールパッチ・インソール表記・ソール形状の変遷は両モデルに共通。年代を見分けるポイントを解説。")}</li>
-      </ul>`)}
+      <div class="overview-heading">${meta.overviewHeading}</div>
+      ${tai(`<ul>${overviewBulletsHtml}</ul>`)}
     </div>
     <div class="swipe-hint">SWIPE FOR DETAILS <span class="arrow">→</span></div>
     <div class="flourish">${SERIES}</div>
@@ -655,8 +657,9 @@ const page = await browser.newPage({
 });
 
 // 既存の出力ファイルを一掃してから作り直す（ページ構成が変わり枚数・番号がズレるため）
+const PREFIX = meta.outputPrefix;
 for (const f of fs.readdirSync(OUT_DIR)) {
-  if (f.startsWith("vans_authentic_carousel_")) fs.unlinkSync(path.join(OUT_DIR, f));
+  if (f.startsWith(`${PREFIX}_`)) fs.unlinkSync(path.join(OUT_DIR, f));
 }
 
 const SPREAD_SIZE = 1; // 1ページあたりの年代数
@@ -664,21 +667,21 @@ const spreads = chunk(eras, SPREAD_SIZE);
 const total = spreads.length + 2; // 表紙 + 年代スプレッド + まとめ
 
 await page.setContent(coverHtml(total), { waitUntil: "load" });
-const coverPath = path.join(OUT_DIR, "vans_authentic_carousel_01_cover.png");
+const coverPath = path.join(OUT_DIR, `${PREFIX}_01_cover.png`);
 await page.screenshot({ path: coverPath, clip: { x: 0, y: 0, width: WIDTH, height: HEIGHT } });
 console.log(`Saved: ${coverPath}`);
 
 for (let i = 0; i < spreads.length; i++) {
   const html = spreadHtml(spreads[i], i + 2, total);
   await page.setContent(html, { waitUntil: "load" });
-  const outPath = path.join(OUT_DIR, `vans_authentic_carousel_${String(i + 2).padStart(2, "0")}.png`);
+  const outPath = path.join(OUT_DIR, `${PREFIX}_${String(i + 2).padStart(2, "0")}.png`);
   await page.screenshot({ path: outPath, clip: { x: 0, y: 0, width: WIDTH, height: HEIGHT } });
   console.log(`Saved: ${outPath}`);
 }
 
 const summaryIndex = spreads.length + 2;
 await page.setContent(summaryHtml(eras, summary, summaryIndex, total), { waitUntil: "load" });
-const summaryPath = path.join(OUT_DIR, `vans_authentic_carousel_${String(summaryIndex).padStart(2, "0")}_summary.png`);
+const summaryPath = path.join(OUT_DIR, `${PREFIX}_${String(summaryIndex).padStart(2, "0")}_summary.png`);
 await page.screenshot({ path: summaryPath, clip: { x: 0, y: 0, width: WIDTH, height: HEIGHT } });
 console.log(`Saved: ${summaryPath}`);
 
