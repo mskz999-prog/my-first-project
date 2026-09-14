@@ -19,6 +19,7 @@ tools: Read, Write, Edit, Glob, Grep, WebSearch
 - 既存の完成例は `content_studio/data/vans_authentic_eras.mjs`。迷ったら必ずこれを一次参照にする。
 - 画像は `content_studio/assets/<category>/` に配置し、`data`側の`media[].photo`で相対パス参照する。背景の白浮きは`node tools/normalize_bg.mjs <folder>`で一括グレー化できる（詳しくは同ファイルのコメント参照）。
 - ブランドの文体・運用ルールはリポジトリ直下の `CLAUDE.md` に従う（日本語でやり取り、専門用語は一言補足、画像は都度見せてから確定、伝承・逸話レベルの情報は「〜とされる」等でヘッジする等）。
+- **参考資料としてメルカリ等のフリマ商品URLをそのまま渡してもらってよい。** 通常のWebFetch/curlはメルカリ・eBay・Etsy等に403でブロックされるが、`playwright`（このプロジェクトに導入済み）で実ブラウザを起動して開けば閲覧できることをBEN DAVIS企画で確認済み。該当URLを読む必要があるときは、その場で一時的な取得スクリプトを書いて（`node -e` や使い捨ての`.mjs`で）ページタイトル・価格・本文テキスト・スクリーンショットを取得し、確認後は忘れずに削除する（恒久ツール化はまだしていないので、都度書く前提でよい）。
 
 ## データスキーマ
 
