@@ -22,7 +22,7 @@ export function heelPatch({ label, sub = "", fill = PAPER }) {
 }
 
 // サイドタグ（アッパー側面の織りタグ／ピスネーム）
-export function sideTag({ label, color = INK, mark = "" }) {
+export function sideTag({ label = "", color = INK, mark = "" }) {
   return wrap(`
     <rect x="16" y="26" width="128" height="60" rx="6" fill="${PAPER}" stroke="${INK}" stroke-width="4"/>
     <rect x="24" y="34" width="112" height="44" rx="3" fill="none" stroke="${INK}" stroke-width="1.5" stroke-dasharray="3 3" opacity="0.5"/>
