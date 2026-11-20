@@ -12,6 +12,8 @@ import { heelPatch, sideTag, sole, insole, shoeSole, storefront, skateboard } fr
 
 const TOPIC = process.argv[2] || "vans_authentic_eras";
 const { eras, summary, meta } = await import(`./data/${TOPIC}.mjs`);
+// 全トピック共通の最終ページ（フォロー誘導）の設定
+const { brand: brandConfig } = await import("./data/_brand.mjs");
 
 // ローカル環境(npm installでnode_modulesにplaywrightが入る)と、このサンドボックス環境
 // (グローバルパスにしかplaywrightが無い)の両方で動くようにフォールバックしている。
@@ -58,10 +60,16 @@ function mediaVisual(item) {
   return ILLUSTRATORS[item.type](item.props);
 }
 
+// meta.photoFit === "cover" のとき、写真はグレーの余白なしで枠いっぱいに描く（はみ出す部分は切れる）。
+// SVGイラストは従来どおり余白ありのまま。未指定のトピック（VANS等）は従来の見た目のまま。
+function fillClass(item) {
+  return item.photo && meta.photoFit === "cover" ? " photo-fill" : "";
+}
+
 function mediaCardHtml(item) {
   return `
     <div class="media-card">
-      <div class="media-art">${mediaVisual(item)}</div>
+      <div class="media-art${fillClass(item)}">${mediaVisual(item)}</div>
       <div class="media-caption">${item.caption}</div>
     </div>
   `;
@@ -79,6 +87,13 @@ function tai(innerHtml) {
 
 function sharedStyle() {
   return `
+  /* photoFit: "cover" 用：枠いっぱいに写真を描く（枠の外寸は余白ありのときと同じ） */
+  .media-art.photo-fill { padding: 0; height: 166px; }
+  .idx-thumb.photo-fill { padding: 0; overflow: hidden; }
+  .media-art.photo-fill img, .idx-thumb.photo-fill img {
+    width: 100%; height: 100%; max-width: none; max-height: none;
+    object-fit: cover; border-radius: 0;
+  }
   @font-face {
     font-family: "Bebas Neue";
     src: url(data:font/ttf;base64,${BEBAS_BASE64}) format("truetype");
@@ -327,7 +342,7 @@ function spreadHtml(erasGroup, index, total) {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 18px 10px 40px;
+    padding: 10px 10px 56px;
   }
   .divider {
     width: 100%;
@@ -335,7 +350,7 @@ function spreadHtml(erasGroup, index, total) {
     border-top: 2.5px dashed #c8c8c2;
     margin: 6px 0;
   }
-  .era-heading { text-align: center; width: 100%; margin-bottom: 34px; }
+  .era-heading { text-align: center; width: 100%; margin-bottom: 26px; }
   .era-name {
     font-size: 50px;
     color: #262019;
@@ -346,7 +361,7 @@ function spreadHtml(erasGroup, index, total) {
     align-items: center;
     justify-content: center;
     gap: 18px;
-    margin-top: 24px;
+    margin-top: 18px;
   }
   .era-divider-line {
     flex: 1;
@@ -366,23 +381,24 @@ function spreadHtml(erasGroup, index, total) {
     letter-spacing: 0.5px;
     white-space: nowrap;
   }
+  /* 写真を大きく見せるため、横1列×4枚 → 2列×2段のグリッドにしている（全トピック共通） */
   .media-row {
-    display: flex;
-    justify-content: center;
-    gap: 14px;
-    margin-bottom: 34px;
-    flex-wrap: nowrap;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 18px 22px;
+    width: 100%;
+    max-width: 920px;
+    margin-bottom: 26px;
   }
   .media-card {
-    width: 205px;
     text-align: center;
   }
   .media-art {
     background: #b3afa4;
     border: 1.5px solid #1a1a1a;
-    border-radius: 10px;
+    border-radius: 12px;
     padding: 8px;
-    height: 150px;
+    height: 268px;
     box-sizing: content-box;
     display: flex;
     align-items: center;
@@ -391,9 +407,10 @@ function spreadHtml(erasGroup, index, total) {
   }
   .media-art svg { max-width: 92%; max-height: 92%; display: block; }
   .media-art img { max-width: 92%; max-height: 92%; display: block; object-fit: contain; border-radius: 4px; }
+  .media-art.photo-fill { height: 284px; }
   .media-caption {
-    margin-top: 10px;
-    font-size: 15px;
+    margin-top: 8px;
+    font-size: 17px;
     color: #4a4a47;
     letter-spacing: 0.3px;
   }
@@ -401,7 +418,7 @@ function spreadHtml(erasGroup, index, total) {
     background: #fffdf6;
     border: 1.5px solid #262019;
     border-radius: 16px;
-    padding: 26px 32px;
+    padding: 22px 30px;
     margin: 0 6px;
     max-width: 920px;
     width: 100%;
@@ -429,8 +446,8 @@ function spreadHtml(erasGroup, index, total) {
   .points ul {
     margin: 0;
     padding-left: 26px;
-    font-size: 24px;
-    line-height: 1.7;
+    font-size: 23px;
+    line-height: 1.6;
     color: #262019;
   }
   .points ul strong { font-weight: 700; }
@@ -471,7 +488,7 @@ function summaryHtml(erasList, summaryData, index, total) {
   const rows = erasList
     .map((era, i) => {
       const thumbsHtml = era.media
-        .map((item) => `<div class="idx-thumb">${mediaVisual(item)}</div>`)
+        .map((item) => `<div class="idx-thumb${fillClass(item)}">${mediaVisual(item)}</div>`)
         .join("");
       return `
       <div class="idx-row">
@@ -487,12 +504,42 @@ function summaryHtml(erasList, summaryData, index, total) {
     })
     .join("");
 
+  // summary.columns（任意）があれば、早見表の写真列の上にディテール名の見出しを出す。
+  // 例: columns: ["紙パッチ", "ボタン裏刻印", ...]（各年代の media と同じ並び順で書く）
+  const columns = summaryData.columns || [];
+  const headHtml = columns.length
+    ? `<div class="idx-head"><div class="idx-head-spacer"></div><div class="idx-head-cols">${columns
+        .map((c) => `<div class="idx-head-col">${c}</div>`)
+        .join("")}</div></div>`
+    : "";
+
   return `<!DOCTYPE html>
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
 <style>
   ${sharedStyle()}
+  .idx-head {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 0 22px;
+    margin: 0 4px 8px;
+  }
+  .idx-head-spacer { width: 280px; flex: none; }
+  .idx-head-cols { display: flex; gap: 10px; flex: none; }
+  .idx-head-col {
+    width: 108px;
+    flex: none;
+    text-align: center;
+    font-size: 14px;
+    font-weight: 700;
+    color: #262019;
+    line-height: 1.25;
+    border-bottom: 2px solid #262019;
+    padding-bottom: 5px;
+  }
   .summary-header { text-align: center; margin: 6px 0 24px; }
   .summary-eyebrow {
     display: inline-block;
@@ -628,13 +675,207 @@ function summaryHtml(erasList, summaryData, index, total) {
       <div class="summary-eyebrow">SUMMARY</div>
       <h1 class="summary-heading display-title">${summaryData.heading}</h1>
     </div>
+    ${headHtml}
     <div class="index">${rows}</div>
     <div class="cta">
       <div class="cta-chips">
         <div class="cta-chip">[&nbsp;<svg class="save-icon" viewBox="0 0 24 24" fill="none" stroke="#f0f0ee" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>&nbsp;DON'T FORGET TO SAVE&nbsp;]</div>
       </div>
     </div>
+    <div class="swipe-hint-sub">SWIPE →</div>
     <div class="flourish">${SERIES}</div>
+  </div>
+</body>
+</html>`;
+}
+
+// 全トピック共通の最終ページ：フォロー・保存・シェアへの誘導（設定は data/_brand.mjs）。
+const ACTION_ICONS = {
+  save: `<path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>`,
+  follow: `<circle cx="9" cy="8" r="4"/><path d="M2 21v-1a7 7 0 0 1 14 0v1"/><path d="M19 8v6M16 11h6"/>`,
+  share: `<path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4z"/>`,
+};
+
+function followHtml(index, total) {
+  const avatarHtml = brandConfig.avatar
+    ? `<img src="${photoDataUri(brandConfig.avatar)}" alt="">`
+    : `<div class="mono">VFN</div>`;
+  const actionsHtml = brandConfig.actions
+    .map(
+      (a) => `
+      <div class="act">
+        <div class="act-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#262019" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ACTION_ICONS[a.icon]}</svg></div>
+        <div class="act-label">${a.label}</div>
+        <div class="act-text">${a.text}</div>
+      </div>`
+    )
+    .join("");
+
+  return `<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<style>
+  ${sharedStyle()}
+  .follow {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    margin-top: -10px;
+  }
+  .eyebrow {
+    display: inline-block;
+    border: 2px solid #262019;
+    border-radius: 999px;
+    padding: 5px 22px;
+    font-family: "Bebas Neue", "IPAGothic", sans-serif;
+    font-size: 17px;
+    letter-spacing: 4px;
+    color: #262019;
+    margin-bottom: 30px;
+  }
+  .avatar {
+    width: 196px;
+    height: 196px;
+    border-radius: 50%;
+    border: 3px solid #262019;
+    padding: 7px;
+    box-sizing: border-box;
+    margin-bottom: 26px;
+    box-shadow: 0 12px 26px rgba(0,0,0,0.14);
+    background: #fffdf6;
+  }
+  .avatar img, .avatar .mono {
+    width: 100%; height: 100%; border-radius: 50%; display: block; object-fit: cover;
+  }
+  .avatar .mono {
+    background: #262019;
+    color: #f0f0ee;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: "Bebas Neue", "IPAGothic", sans-serif;
+    font-size: 64px;
+    letter-spacing: 6px;
+    padding-left: 6px;
+    box-sizing: border-box;
+  }
+  .brand-name {
+    font-size: 76px;
+    color: #1a1a1a;
+    margin: 0;
+    line-height: 1;
+  }
+  .handle {
+    /* Bebas Neueは大文字しか無く、小文字のアカウント名が大文字化されてしまうため通常フォントにする */
+    margin-top: 14px;
+    font-size: 30px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: #b23b30;
+  }
+  .tagline {
+    margin-top: 26px;
+    font-family: "Bebas Neue", "IPAGothic", sans-serif;
+    font-size: 44px;
+    letter-spacing: 5px;
+    color: #262019;
+    display: flex;
+    align-items: center;
+    gap: 22px;
+  }
+  .tagline::before, .tagline::after {
+    content: "";
+    width: 60px;
+    height: 2px;
+    background: #262019;
+  }
+  .desc {
+    margin-top: 10px;
+    font-family: Georgia, "Times New Roman", serif;
+    font-style: italic;
+    font-size: 23px;
+    line-height: 1.6;
+    color: #4a4a47;
+  }
+  .acts {
+    display: flex;
+    gap: 18px;
+    margin-top: 40px;
+  }
+  .act {
+    width: 260px;
+    background: #fffdf6;
+    border-radius: 14px;
+    padding: 24px 16px 22px;
+    box-sizing: border-box;
+    box-shadow: 0 10px 22px rgba(0,0,0,0.10);
+  }
+  .act-icon {
+    width: 58px;
+    height: 58px;
+    margin: 0 auto 12px;
+    border-radius: 50%;
+    background: #b3afa4;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .act-icon svg { width: 28px; height: 28px; }
+  .act-label {
+    font-family: "Bebas Neue", "IPAGothic", sans-serif;
+    font-size: 26px;
+    letter-spacing: 3px;
+    color: #262019;
+  }
+  .act-text {
+    margin-top: 6px;
+    font-family: Georgia, "Times New Roman", serif;
+    font-style: italic;
+    font-size: 18px;
+    line-height: 1.5;
+    color: #4a4a47;
+  }
+  .follow-cta {
+    margin-top: 40px;
+    display: inline-flex;
+    align-items: center;
+    gap: 16px;
+    background: #262019;
+    color: #f0f0ee;
+    border-radius: 12px;
+    padding: 18px 48px;
+    font-family: "Bebas Neue", "IPAGothic", sans-serif;
+    font-size: 34px;
+    letter-spacing: 4px;
+    box-shadow: 0 10px 22px rgba(0,0,0,0.22);
+  }
+  .follow-cta .arrow {
+    font-family: "Bebas Neue", "IPAGothic", sans-serif;
+    font-size: 30px;
+  }
+</style>
+</head>
+<body>
+  <div class="slide">
+    <div class="topbar">
+      <div class="brand">${BRAND} ・ ${SERIES}</div>
+      <div class="page">${index} / ${total}</div>
+    </div>
+    <div class="follow">
+      <div class="eyebrow">${brandConfig.eyebrow || "THANKS FOR READING"}</div>
+      <div class="avatar">${avatarHtml}</div>
+      <h1 class="brand-name display-title">${BRAND}</h1>
+      <div class="handle">${brandConfig.handle}</div>
+      <div class="tagline">${brandConfig.tagline}</div>
+      <div class="desc">${brandConfig.description}</div>
+      <div class="acts">${actionsHtml}</div>
+      <div class="follow-cta">${brandConfig.cta}<span class="arrow">→</span></div>
+    </div>
+    <div class="flourish">${BRAND}</div>
   </div>
 </body>
 </html>`;
@@ -664,7 +905,7 @@ for (const f of fs.readdirSync(OUT_DIR)) {
 
 const SPREAD_SIZE = 1; // 1ページあたりの年代数
 const spreads = chunk(eras, SPREAD_SIZE);
-const total = spreads.length + 2; // 表紙 + 年代スプレッド + まとめ
+const total = spreads.length + 3; // 表紙 + 年代スプレッド + まとめ + フォロー誘導（固定）
 
 await page.setContent(coverHtml(total), { waitUntil: "load" });
 const coverPath = path.join(OUT_DIR, `${PREFIX}_01_cover.png`);
@@ -684,5 +925,11 @@ await page.setContent(summaryHtml(eras, summary, summaryIndex, total), { waitUnt
 const summaryPath = path.join(OUT_DIR, `${PREFIX}_${String(summaryIndex).padStart(2, "0")}_summary.png`);
 await page.screenshot({ path: summaryPath, clip: { x: 0, y: 0, width: WIDTH, height: HEIGHT } });
 console.log(`Saved: ${summaryPath}`);
+
+const followIndex = summaryIndex + 1;
+await page.setContent(followHtml(followIndex, total), { waitUntil: "load" });
+const followPath = path.join(OUT_DIR, `${PREFIX}_${String(followIndex).padStart(2, "0")}_follow.png`);
+await page.screenshot({ path: followPath, clip: { x: 0, y: 0, width: WIDTH, height: HEIGHT } });
+console.log(`Saved: ${followPath}`);
 
 await browser.close();

@@ -1,1 +1,5 @@
 node_modules/
+# 非公開の参考用（Web上の他者撮影写真）。GitHubに上げない
+assets/_private_ref/
+data/*_private.mjs
+output/*_private_*
