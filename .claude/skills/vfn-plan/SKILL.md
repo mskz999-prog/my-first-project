@@ -1,17 +1,22 @@
 ---
 name: vfn-plan
 description: Draft a new VINTAGE FIELD NOTES content_studio topic (a brand/model/item deep-dive carousel like the VANS AUTHENTIC/ERA era guide). Use when the user wants to start a new content_studio carousel — gives them a brand/item name plus reference material (photos, a hand-drawn chart, notes, links) and wants a structured draft before any asset work begins. Produces a new data/<topic>.mjs file matching the established schema and a plain-language media checklist, but does NOT touch assets, render, or commit anything.
-tools: Read, Write, Edit, Glob, Grep, WebSearch
+tools: Read, Write, Edit, Glob, Grep, WebSearch, WebFetch, Bash, Agent
 ---
 
 # VINTAGE FIELD NOTES: 企画立案スキル
 
 `content_studio/` のカルーセル制作パイプラインのうち、**「素材共有 → 企画立案(テキスト) → レイアウトFIX」の最初の2段階**を担当するスキル。VANS AUTHENTIC/ERA制作で確立したフォーマットを土台に、次のトピックの`data/<topic>.mjs`をドラフトする。
 
-**このスキルの範囲外**（後続ステップとして別途進める）:
-- 実際の写真・イラスト素材の配置や加工（`tools/normalize_bg.mjs`を使う）
-- `render_era_slides.mjs`の実行・レンダリング
-- git add / commit / push
+**制作の全体像（3スキル）**:
+1. **vfn-plan（このスキル）**: リサーチ → 下書き → ファクトチェック（`vfn-fact-checker` サブエージェント）→ 構成FIX
+2. **vfn-assets**: 参考写真収集 → 非公開プレビュー → Geminiプロンプト自動生成 → イラスト取り込み
+3. **vfn-publish**: 最終レンダリング → 最終チェック（`vfn-qa` サブエージェント）→ コミット → 写真アプリ保存 → キャプション・ハッシュタグ
+
+このスキルでは画像の収集・配置、コミットはしない。構成確認のための仮レンダリング（SVG仮イラストのまま）はしてよい。
+
+**レイアウトの既定**（Levi's 557で確立）: `meta.photoFit: "cover"`（写真を枠いっぱい）、`summary.columns`（早見ガイドの列見出し）、
+年代3つ以下なら早見ガイドは自動で大きい写真のレイアウトになる。最終ページ（フォロー誘導）は `data/_brand.mjs` で全トピック共通。
 
 ## 前提知識
 
@@ -19,7 +24,7 @@ tools: Read, Write, Edit, Glob, Grep, WebSearch
 - 既存の完成例は `content_studio/data/vans_authentic_eras.mjs`。迷ったら必ずこれを一次参照にする。
 - 画像は `content_studio/assets/<category>/` に配置し、`data`側の`media[].photo`で相対パス参照する。背景の白浮きは`node tools/normalize_bg.mjs <folder>`で一括グレー化できる（詳しくは同ファイルのコメント参照）。
 - ブランドの文体・運用ルールはリポジトリ直下の `CLAUDE.md` に従う（日本語でやり取り、専門用語は一言補足、画像は都度見せてから確定、伝承・逸話レベルの情報は「〜とされる」等でヘッジする等）。
-- **参考資料としてメルカリ等のフリマ商品URLをそのまま渡してもらってよい。** 通常のWebFetch/curlはメルカリ・eBay・Etsy等に403でブロックされるが、`playwright`（このプロジェクトに導入済み）で実ブラウザを起動して開けば閲覧できることをBEN DAVIS企画で確認済み。該当URLを読む必要があるときは、その場で一時的な取得スクリプトを書いて（`node -e` や使い捨ての`.mjs`で）ページタイトル・価格・本文テキスト・スクリーンショットを取得し、確認後は忘れずに削除する（恒久ツール化はまだしていないので、都度書く前提でよい）。
+- **参考資料としてメルカリ等のフリマ商品URLをそのまま渡してもらってよい。** 通常のWebFetch/curlはメルカリ・eBay・Etsy等に403でブロックされるが、`playwright`（このプロジェクトに導入済み）で実ブラウザを起動して開けば閲覧できることをBEN DAVIS企画で確認済み。該当URLを読むときは**恒久ツール `tools/fetch_refs.mjs get` を使う**（使い方は vfn-assets スキル）。
 
 ## データスキーマ
 
@@ -52,7 +57,10 @@ export const eras = [
     media: [
       // 1エントリ = 1枚の写真ボックス。基本4項目（ヒールパッチ/インソール等に相当する
       // "見分けポイントになるディテール4点"）だが、対象に応じて増減してよい。
-      { type: "heelPatch", caption: "キャプション", props: { label: "..." }, photo: "category/file.jpg" },
+      // photo は「最終的なGemini画像の保存先」を下書き段階から書いてよい（未配置ならSVGで仮表示される）。
+      // gemini は Geminiプロンプト自動生成（tools/gemini_prompts.mjs）用。英語で書く。check だけ日本語。
+      { type: "heelPatch", caption: "キャプション", props: { label: "..." }, photo: "topic_dir/e1_patch.jpg",
+        gemini: { item: "a 1950s Levi's paper back patch", key: "the text \"LOT 507 XX\"", text: "LOT 507 XX", check: "507XX表記" } },
     ],
   },
 ];
@@ -93,6 +101,12 @@ export const summary = {
 - 上記スキーマに沿って `data/<topic>.mjs` を新規作成する（既存の `vans_authentic_eras.mjs` を壊さないこと）。
 - 合わせて、**テキストでの構成案サマリ**を会話内に出す（「表紙にはこの3点、ページ2は◯◯期でこの4枚の写真が必要、…」の形）。これが③のレイアウトFIXの土台になる。
 - 各`media`エントリについて、**まだ存在しない**`photo`パスをリストアップし、「この写真/イラストをGeminiで生成してassets/xxx/に置いてください」という買い物リストを最後に添える。
+
+### 3.5 ファクトチェック（サブエージェント）
+
+- 下書きを書いたら、**画像工程に入る前に** `vfn-fact-checker` サブエージェントに `data/<topic>.mjs` を渡して独立に検証させる。
+  （Levi's 557では最後にやって2か所の根拠なし表現が見つかった。早くやるほど手戻りが少ない）
+- 返ってきた指摘は自分でもソースを開いて確かめ、直す箇所と理由を本人に平易に説明してから直す。
 
 ### 4. 確認して引き渡す
 

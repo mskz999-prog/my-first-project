@@ -11,7 +11,8 @@ import { createRequire } from "node:module";
 import { heelPatch, sideTag, sole, insole, shoeSole, storefront, skateboard } from "./lib/illustrations.mjs";
 
 const TOPIC = process.argv[2] || "vans_authentic_eras";
-const { eras, summary, meta } = await import(`./data/${TOPIC}.mjs`);
+const topicModule = await import(`./data/${TOPIC}.mjs`);
+const { summary, meta } = topicModule;
 // 全トピック共通の最終ページ（フォロー誘導）の設定
 const { brand: brandConfig } = await import("./data/_brand.mjs");
 
@@ -38,6 +39,12 @@ const BG = meta.bg || "#F4F3EF";
 
 const ILLUSTRATORS = { heelPatch, sideTag, sole, insole, shoeSole, storefront, skateboard };
 
+// 未配置の photo を取り除いた eras（取り除いた項目は SVG イラストで仮表示される）
+const eras = topicModule.eras.map((era) => ({
+  ...era,
+  media: era.media.map((m) => (m.photo && !photoExists(m.photo) ? { ...m, photo: undefined } : m)),
+}));
+
 const photoDataUriCache = new Map();
 function photoDataUri(relPath) {
   if (!photoDataUriCache.has(relPath)) {
@@ -52,6 +59,14 @@ function photoDataUri(relPath) {
 // メインタイトル用の極太コンデンストフォント（Bebas Neue）をbase64埋め込みで使う。
 // 日本語部分はグリフが無いためIPAGothicにフォールバックする。
 const BEBAS_BASE64 = fs.readFileSync(path.join(ASSETS_DIR, "fonts/BebasNeue-Regular.ttf")).toString("base64");
+
+// photo に書いたファイルがまだ無い場合（Gemini画像の到着待ちなど）は、警告だけ出して
+// SVGイラストで仮表示する。下書き段階からデータに最終的な photo パスを書いておけるようにするため。
+function photoExists(relPath) {
+  const ok = !!relPath && fs.existsSync(path.join(ASSETS_DIR, relPath));
+  if (relPath && !ok) console.warn(`  (未配置の画像: ${relPath} → 仮表示)`);
+  return ok;
+}
 
 function mediaVisual(item) {
   if (item.photo) {
@@ -192,7 +207,10 @@ function sharedStyle() {
 }
 
 function coverHtml(total) {
-  const heroUri = photoDataUri(meta.heroImage);
+  // 表紙イラストが未配置なら、単色のプレースホルダーで仮表示する
+  const heroUri = photoExists(meta.heroImage)
+    ? photoDataUri(meta.heroImage)
+    : "data:image/svg+xml;utf8," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800"><rect width="100%" height="100%" fill="#ddd9cf"/><text x="50%" y="50%" text-anchor="middle" font-size="48" fill="#8a8a84" font-family="sans-serif">COVER (pending)</text></svg>');
   const overviewBulletsHtml = meta.overviewBullets.map((b) => `<li>${emphasizeQuoted(b)}</li>`).join("");
   return `<!DOCTYPE html>
 <html lang="ja">

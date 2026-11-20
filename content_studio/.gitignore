@@ -6,3 +6,5 @@ output/*_private_*
 # Geminiの生成画像の一時置き場（採用分だけ assets/ に移してコミットする）
 gemini_inbox/*
 !gemini_inbox/README.md
+# ingest.mjs が上書き前に退避する古い画像
+*.bak

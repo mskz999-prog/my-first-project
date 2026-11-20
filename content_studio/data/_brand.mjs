@@ -23,4 +23,10 @@ export const brand = {
   ],
   // いちばん下の黒いボタンの文言
   cta: "Follow for the next drop",
+  // Gemini用プロンプト（tools/gemini_prompts.mjs）で毎回添付する「タッチの見本」。
+  // 表紙用と、ディテール用。より気に入った絵ができたら差し替えてよい。
+  geminiStyle: {
+    cover: "covers/levis_557_hero.jpg",
+    detail: "levis_557/e2_button_d.jpg",
+  },
 };
