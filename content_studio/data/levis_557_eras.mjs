@@ -40,13 +40,14 @@ export const eras = [
     name: "557XX ギャラ入り",
     bullets: [
       "紙パッチに「EVERY GARMENT GUARANTEED」（品質保証の文言、通称「ギャラ」）が入る最初期。ボタン裏の刻印は数字2桁の「17」が目安とされ、17ならほぼギャラ入りと判断できるとされる。",
-      "胸ポケットのフラップ裏に本体より薄い「ライトオンスデニム」、袖口と前立ての端にはセカンドと同じ「折り返しステッチ」が残るなど、507XXの作りを色濃く引き継ぐ。",
+      "胸ポケットのフラップ裏に本体より薄い「ライトオンスデニム」、袖口などにセカンドと同じ「折り返しステッチ」が残るなど、507XXの作りを色濃く引き継ぐ。",
     ],
     media: [
-      { type: "heelPatch", caption: "紙パッチ（ギャラ入り）", props: { label: "557XX", sub: "GUARANTEED" } },
-      { type: "shoeSole", caption: "ボタン裏刻印（17）", props: {} },
-      { type: "insole", caption: "フラップ裏（ライトオンス）", props: {} },
-      { type: "sideTag", caption: "袖口（折り返しステッチ）", props: {} },
+      // photo は本人がGeminiで生成した水彩イラスト（表紙と同じタッチ）
+      { type: "heelPatch", caption: "紙パッチ（ギャラ入り）", props: { label: "557XX", sub: "GUARANTEED" }, photo: "levis_557/e1_patch_guaranteed.jpg" },
+      { type: "shoeSole", caption: "ボタン裏刻印（17）", props: {}, photo: "levis_557/e1_button_17.jpg" },
+      { type: "insole", caption: "フラップ裏（ライトオンス）", props: {}, photo: "levis_557/e1_flap_lightounce.jpg" },
+      { type: "sideTag", caption: "袖口（折り返しステッチ）", props: {}, photo: "levis_557/e1_cuff_folded_stitch.jpg" },
     ],
   },
   {
@@ -57,10 +58,10 @@ export const eras = [
       "袖口の「折り返しステッチ」は基本的に姿を消す。フラップ裏はライトオンスの個体と本体と同じデニムの個体の両方が報告される移行期で、最終的な判別は「パッチ表記」が決め手。",
     ],
     media: [
-      { type: "heelPatch", caption: "紙パッチ（ギャラ無し）", props: { label: "557XX" } },
-      { type: "shoeSole", caption: "ボタン裏刻印（D）", props: {} },
-      { type: "insole", caption: "フラップ裏（個体差あり）", props: {} },
-      { type: "sideTag", caption: "袖口（折り返しなし）", props: {} },
+      { type: "heelPatch", caption: "紙パッチ（ギャラ無し）", props: { label: "557XX" }, photo: "levis_557/e2_patch_no_guarantee.jpg" },
+      { type: "shoeSole", caption: "ボタン裏刻印（D）", props: {}, photo: "levis_557/e2_button_d.jpg" },
+      { type: "insole", caption: "フラップ裏（個体差あり）", props: {}, photo: "levis_557/e2_flap.jpg" },
+      { type: "sideTag", caption: "袖口（折り返しなし）", props: {}, photo: "levis_557/e2_cuff.jpg" },
     ],
   },
   {
@@ -68,13 +69,14 @@ export const eras = [
     name: "557（XX表記なし）",
     bullets: [
       "パッチの品番から「XX」が省略され「557」表記に。最後は「557／70505」のダブルネームを経て、「70505」（フォース）へ品番が切り替わる。",
-      "ボタン裏は「O」などのアルファベット刻印（ただしOは557XXにもあるため単独では決め手にならない）。フラップ裏は本体と同じデニムになり、生地の織りも整った印象になる。",
+      "ボタン裏は「O」などのアルファベット刻印（ただしOは557XXにもあるため単独では決め手にならない）。フラップ裏は本体と同じデニムの個体が中心とされる。",
     ],
     media: [
-      { type: "heelPatch", caption: "紙パッチ（557表記）", props: { label: "557" } },
-      { type: "shoeSole", caption: "ボタン裏刻印（O など）", props: {} },
-      { type: "insole", caption: "フラップ裏（本体と同じデニム）", props: {} },
-      { type: "sideTag", caption: "袖口（折り返しなし）", props: {} },
+      { type: "heelPatch", caption: "紙パッチ（557表記）", props: { label: "557" }, photo: "levis_557/e3_patch_557.jpg" },
+      { type: "shoeSole", caption: "ボタン裏刻印（O など）", props: {}, photo: "levis_557/e3_button_o.jpg" },
+      // ギャラ無し期と同じ見た目（本体と同じデニム）なので、同じイラストを使い回している（本人了承）
+      { type: "insole", caption: "フラップ裏（本体と同じデニム）", props: {}, photo: "levis_557/e2_flap.jpg" },
+      { type: "sideTag", caption: "袖口（折り返しなし）", props: {}, photo: "levis_557/e3_cuff.jpg" },
     ],
   },
 ];

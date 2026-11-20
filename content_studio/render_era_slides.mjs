@@ -507,6 +507,9 @@ function summaryHtml(erasList, summaryData, index, total) {
   // summary.columns（任意）があれば、早見表の写真列の上にディテール名の見出しを出す。
   // 例: columns: ["紙パッチ", "ボタン裏刻印", ...]（各年代の media と同じ並び順で書く）
   const columns = summaryData.columns || [];
+  // 年代が3つ以下だと行が少なくページ下半分が空くため、年代名を写真の上に置く
+  // 「ゆったり」レイアウトに切り替え、写真を大きく（横幅いっぱい）表示する。
+  const roomy = erasList.length <= 3;
   const headHtml = columns.length
     ? `<div class="idx-head"><div class="idx-head-spacer"></div><div class="idx-head-cols">${columns
         .map((c) => `<div class="idx-head-col">${c}</div>`)
@@ -627,6 +630,23 @@ function summaryHtml(erasList, summaryData, index, total) {
   }
   .idx-thumb svg { width: 100%; height: 100%; display: block; }
   .idx-thumb img { width: 100%; height: 100%; display: block; object-fit: contain; border-radius: 3px; }
+  /* ゆったりレイアウト（年代3つ以下）: 年代名を上に1行で、写真4枚を横幅いっぱいに */
+  .roomy .summary-header { margin: 18px 0 34px; }
+  .roomy .summary-heading { font-size: 52px; }
+  .roomy .idx-head { justify-content: center; margin-bottom: 12px; }
+  .roomy .idx-head-spacer { display: none; }
+  .roomy .idx-head-cols, .roomy .idx-thumbs { gap: 12px; }
+  .roomy .idx-head-col { width: 212px; font-size: 18px; padding-bottom: 7px; }
+  .roomy .index { gap: 16px; }
+  .roomy .idx-row { flex-direction: column; align-items: stretch; padding: 18px 22px 22px; gap: 14px; }
+  .roomy .idx-left { width: auto; }
+  .roomy .idx-text { display: flex; align-items: center; gap: 14px; }
+  .roomy .idx-badge { margin-bottom: 0; font-size: 16px; padding: 3px 13px; }
+  .roomy .idx-name { font-size: 24px; }
+  .roomy .idx-num { width: 32px; height: 32px; font-size: 16px; }
+  .roomy .idx-thumbs { justify-content: center; }
+  .roomy .idx-thumb { width: 212px; height: 172px; }
+  .roomy .cta { margin-top: 34px; }
   .cta {
     margin-top: 26px;
     display: flex;
@@ -666,7 +686,7 @@ function summaryHtml(erasList, summaryData, index, total) {
 </style>
 </head>
 <body>
-  <div class="slide">
+  <div class="slide${roomy ? " roomy" : ""}">
     <div class="topbar">
       <div class="brand">${BRAND} ・ ${SERIES}</div>
       <div class="page">${index} / ${total}</div>

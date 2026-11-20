@@ -3,3 +3,6 @@ node_modules/
 assets/_private_ref/
 data/*_private.mjs
 output/*_private_*
+# Geminiの生成画像の一時置き場（採用分だけ assets/ に移してコミットする）
+gemini_inbox/*
+!gemini_inbox/README.md
