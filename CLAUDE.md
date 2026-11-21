@@ -73,9 +73,9 @@
 **制作フロー（2026年11月〜、Levi's 557制作で確立）**: 3つのスキルで進める。
 `vfn-plan`（リサーチ・下書き・`vfn-fact-checker`サブエージェントで裏取り）→ `vfn-assets`（参考写真収集
 `tools/fetch_refs.mjs`・非公開プレビュー・Geminiプロンプト自動生成`tools/gemini_prompts.mjs`・貼られた画像の
-取り込み`tools/ingest.mjs`）→ `vfn-publish`（最終レンダリング・`vfn-qa`サブエージェントで点検・コミット・
+取り込み`tools/ingest.mjs`。507XXからは参考写真の切り抜き・点検`tools/prep_ref.mjs`、データ点検`tools/check_topic.mjs`も使う）→ `vfn-publish`（最終レンダリング・`vfn-qa`サブエージェントで点検・コミット・
 写真アプリ保存`tools/export_photos.mjs`・キャプション/ハッシュタグ）。本人向けの手順書は`content_studio/WORKFLOW.md`。
-現在は「本人がGeminiでイラスト生成 → チャットに番号付きで貼る」運用で、公開版はGeminiイラストのみ
+現在は「本人がGeminiでイラスト生成 → チャットに番号付きで貼る」運用で、細部は参考写真1枚をそのまま水彩化させる「写真に忠実」モードが標準（507XXで確立）。公開版はGeminiイラストのみ
 （Web上の他人の写真は`assets/_private_ref/`と`*_private.mjs`の非公開確認用にだけ使う）。
 
 **運用ルール**:

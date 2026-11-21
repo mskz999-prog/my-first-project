@@ -1,22 +1,31 @@
 // データファイルから「Geminiにそのまま貼れるプロンプト集」を自動生成する恒久ツール。
-// Levi's 557制作で起きた失敗（写真にフィルターをかけただけ／パーツが鏡写し／ボタンがお皿型 など）
-// の対策を最初からプロンプトに入れてある。
 //
 // 使い方:
 //   node tools/gemini_prompts.mjs <topic>
 //   → assets/_private_ref/<topic>/gemini/ に
 //      PROMPTS.md（番号ごとの添付ファイルとプロンプト）と、添付用にコピーした参考写真・スタイル見本を作る
 //
+// ■ 標準のやり方（Levi's 507XXで確立。これ以外は崩れやすかった）
+//   細部（01〜）… 「写真に忠実」モード。参考写真1枚だけを添付し、そのまま水彩イラスト化させる。
+//                 見本の絵は付けない（見本の方を描き直される）。比率は写真のまま（違う比率を指定すると描き足される）。
+//                 色も写真どおり（水彩と言うだけだと色が薄くなる）。
+//   表紙（00）… 実物写真を複数枚（meta.heroRefs）＋画風見本（_brand の geminiStyle.cover＝VANS表紙）。
+//                 画風見本は「形が写らない物」にする（別モデルの服の絵を付けると形を真似される）。
+//   → 参考写真の出来がそのまま絵の出来になる。先に tools/prep_ref.mjs で下ごしらえ・点検すること。
+//
 // データ側に書くもの（data/<topic>.mjs）:
-//   meta.heroImage   … 表紙の保存先（例 "covers/levis_507_hero.jpg"）
-//   meta.heroRef     … 表紙の参考写真（assets/ からの相対パス。_private_ref/... など）
-//   meta.heroGemini  … { subject: "英語で被写体", details: ["英語の正確さ要件", ...] }
-//   media[].photo    … Gemini画像の保存先（例 "levis_507/e1_patch.jpg"）
-//   media[].ref      … 参考写真
-//   media[].gemini   … { item: "英語で被写体", key: "英語で必ず読めるべき点",
-//                        text: "正確に書かせたい文字（任意）", notes: ["英語の追加指示", ...],
-//                        check: "日本語の確認ポイント（任意）" }
+//   meta.heroImage   … 表紙の保存先（例 "covers/levis_506xx_hero.jpg"）
+//   meta.heroRefs    … 表紙の参考写真（配列・assets/ からの相対パス）。平置きで袖が胴に付いた正面写真を2〜3枚
+//   meta.heroGemini  … { subject: "英語で被写体", details: ["英語の正確さ要件", ...], check: "日本語の確認点",
+//                        styleImage: 追加の画風見本（任意・質感の切り抜き等）, intro/styleText: 冒頭・画風の上書き（任意） }
+//   media[].photo    … Gemini画像の保存先（例 "levis_506xx/e1_patch.jpg"）
+//   media[].ref      … 参考写真（prep_ref で切り抜いた物）
+//   media[].gemini   … { item: "英語で被写体", key: "英語で必ず見えるべき点",
+//                        text: "写させたい文字（任意）", notes: ["英語の追加指示", ...],
+//                        check: "日本語の確認ポイント（任意）",
+//                        faithful: false にすると旧来の「描き直し」モード（非推奨） }
 // スロット番号は lib/topic.mjs の規則（00=表紙、01〜=年代順の通し番号）。
+// 同じ photo を指す2回目以降の項目は gemini を書かない（使い回し）。
 
 import fs from "node:fs";
 import path from "node:path";
@@ -31,6 +40,7 @@ const mod = await loadTopic(topic);
 const { brand } = await import("../data/_brand.mjs");
 const style = brand.geminiStyle || {};
 const outDir = path.join(ASSETS_DIR, "_private_ref", topic, "gemini");
+fs.rmSync(outDir, { recursive: true, force: true }); // 古い添付ファイルが残って取り違えないように毎回作り直す
 fs.mkdirSync(outDir, { recursive: true });
 
 function copyIn(rel, name) {
@@ -42,35 +52,14 @@ function copyIn(rel, name) {
   return dest;
 }
 
-const styleCover = copyIn(style.cover, "STYLE_cover");
-const styleDetail = copyIn(style.detail, "STYLE_detail");
+// 色について（507XXで「水彩」と指定すると全体に色が薄くなった）
+const COLOR_RULE =
+  "COLOR: match the photo's colors, values and contrast exactly — the same depth of indigo, the same darks and highlights, the same thread and leather colors. Do NOT lighten, wash out, pastelize or desaturate anything; use the watercolor at full pigment strength.";
 
-const STYLE_TEXT =
-  "fine ink/pencil linework, soft layered watercolor washes, fabric weave drawn as fine diagonal hatching, muted natural colors (deep indigo denim, tan/orange thread, aged tan paper, aged silver/copper metal), warm ivory textured paper. Denim must look like real well-worn vintage denim, not flat: mottled indigo with natural fading, pale abraded edges and roping along seams. Hand-drawn editorial field-notebook feel — not photorealistic, not cartoonish.";
-
-// 被写体の種類ごとに、過去に崩れた点の予防指示を自動で足す
-function autoNotes(g) {
-  const s = `${g.item} ${g.key}`.toLowerCase();
-  const n = [];
-  if (/button|rivet|snap/.test(s))
-    n.push(
-      "The button is a gently CONVEX DOME bulging toward the viewer with only a thin, low rolled rim — not a dish with a raised ring. Any stamped letter or number is EMBOSSED (raised). No other marks on the button."
-    );
-  if (/flap|pocket/.test(s) && !/\btab\b/.test(s)) // 赤タブ等の「ポケット脇の小物」には付けない
-    n.push(
-      "Draw the structure correctly: the flap and the pocket body are different shapes — do NOT mirror or duplicate them. Only the flap has a buttonhole; the pocket body has the button."
-    );
-  // 文字を指定した時だけ（「文字が読めない革パッチ」等に誤って付かないように）
-  if (g.text && /patch|label|tag/.test(s))
-    n.push("Keep the lettering crisp and spelled exactly as specified. Do not invent extra words, signatures or numbers.");
-  return n;
-}
-
-// gemini.allowHand … 「指でめくる」等、指先を描かせたい時だけ true
-// gemini.faithful … 参考写真を「そのまま水彩イラスト化」する指示に切り替える（形を勝手に変えられる時用）
+// ---- 細部：写真に忠実モード（標準） ----
+// 4:3など写真と違う比率を指定すると、足りない部分を描き足してボタン等が増えた。
+// 画風の説明に「金属」等の物の名前を入れると、それも描き足されやすかった。→ 比率は写真のまま・画風は最小限の言葉で。
 function faithfulPrompt(g) {
-  // 507XXで分かったこと: 4:3など写真と違う比率を指定すると、足りない部分をGeminiが描き足してボタン等が増える。
-  // 画風の説明に「金属」等の語があると、それも描き足されやすい。→ 比率は写真のまま・画風は最小限の言葉で。
   return `This is a STYLE-TRANSFER task only — like applying a watercolor filter to the attached photo. Only ONE image is attached: the photo.
 
 Output the SAME image as the photo, just rendered as a hand-drawn watercolor:
@@ -79,33 +68,42 @@ Output the SAME image as the photo, just rendered as a hand-drawn watercolor:
 - add NOTHING that is not in the photo (no buttons, rivets, stitches, tabs, labels, tools, hands, text) and remove nothing
 - if anything is unclear, copy the photo as it is — never invent
 
-Medium: fine ink linework with soft transparent watercolor washes on warm ivory paper, fabric grain shown with fine hatching, colors close to the photo.
+Medium: fine ink linework with rich, layered watercolor on warm ivory paper, fabric grain shown with fine hatching.
+${COLOR_RULE}
 
 Must stay clearly visible: ${g.key}${g.text ? `\nLettering: copy it exactly as it appears in the photo (${g.text}).` : ""}
 ${(g.notes || []).length ? "\n" + g.notes.map((x) => `- ${x}`).join("\n") + "\n" : ""}
 No added text, no watermark.`;
 }
 
-function detailPrompt(slot) {
-  const g = slot.gemini;
-  if (g.faithful) return faithfulPrompt(g);
-  const notes = [...autoNotes(g), ...(g.notes || [])];
-  return `Create an original illustration of ${g.item}. Use the attached STYLE sample for the drawing style only. Follow the attached reference photo FAITHFULLY for the construction: the shapes of pockets and flaps, where every seam and stitch line runs, and how the parts connect must match the photo — do not invent, add, remove or rearrange parts. Redraw it by hand in the illustration style (do NOT just apply a filter to the photo).
+// ---- 細部：旧来の描き直しモード（gemini.faithful === false の時だけ。崩れやすいので非推奨） ----
+const STYLE_TEXT =
+  "fine ink/pencil linework, layered watercolor, fabric weave drawn as fine diagonal hatching, warm ivory textured paper. Denim must look like real well-worn vintage denim, not flat. Hand-drawn editorial field-notebook feel — not photorealistic, not cartoonish.";
+function redrawPrompt(g) {
+  return `Create an original illustration of ${g.item}. Use the attached STYLE sample for the drawing style only. Follow the attached reference photo FAITHFULLY for the construction: the shapes of pockets and flaps, where every seam and stitch line runs, and how the parts connect must match the photo — do not invent, add, remove or rearrange parts.
 
 STYLE: ${STYLE_TEXT}
+${COLOR_RULE}
 
 MUST BE CLEARLY READABLE: ${g.key}${g.text ? `\nEXACT LETTERING: ${g.text}` : ""}
-${notes.length ? "\n" + notes.map((x) => `- ${x}`).join("\n") + "\n" : ""}
-4:3 landscape canvas, the detail fills the frame. ${g.allowHand ? "No tweezers or hangers; one fingertip only as described above." : "No tweezers, hands or hangers."} No extra text, no watermark.`;
+${(g.notes || []).length ? "\n" + g.notes.map((x) => `- ${x}`).join("\n") + "\n" : ""}
+Keep the photo's aspect ratio. ${g.allowHand ? "No tweezers or hangers; one fingertip only as described above." : "No tweezers, hands or hangers."} No extra text, no watermark.`;
 }
 
-// heroGemini.intro … 冒頭の指示文の上書き（添付の使い方を変える時）
-// heroGemini.styleText … 表紙だけ画風を変えたい時の上書き（例: 507XXはフォトリアル寄り）
-function coverPrompt(slot) {
-  const g = slot.gemini;
-  return `${g.intro || `Create an original hand-drawn illustration of ${g.subject}. Use the attached STYLE sample for the drawing style, and the attached reference photo ONLY for construction details. Redraw it in your own composition — do not trace or filter the photo.`}
+const isFaithful = (g) => g.faithful !== false;
 
-STYLE: ${g.styleText || "fine graphite pencil linework with soft, layered watercolor washes, visible sketch lines, subtle paper grain on warm ivory textured paper, muted natural colors, soft cast shadow. Calm editorial field-notebook feel — not cartoonish, not photorealistic."}
+// ---- 表紙 ----
+function coverPrompt(g, styleCount, photoCount) {
+  const intro =
+    g.intro ||
+    `Create a hand-drawn watercolor illustration of ${g.subject}, front view, laid flat and buttoned. Attachments, in this order: the first ${styleCount > 1 ? `${styleCount} images are` : "image is"} drawing-style ${styleCount > 1 ? "samples" : "sample"} only — copy the technique, NOT the subject or its shape. The remaining ${photoCount} images are photos of real original garments. Follow these photos faithfully for the shape, proportions, how it lies flat (including where the sleeves lie), and every construction detail. Natural vintage wear (fading, fraying, small repairs) is welcome. Do not reproduce the photos' backgrounds or lighting.`;
+  const styleText =
+    g.styleText ||
+    "soft graphite pencil outlines and sketch lines with layered watercolor, gentle soft-edged shading, warm ivory textured paper with a loose wash vignette. Keep the rugged character of real vintage fabric: visible weave, natural fading, abraded edges, roped seams. Painterly — not photorealistic, not glossy, not cartoonish.";
+  return `${intro}
+
+STYLE: ${styleText}
+COLOR: take the colors from the photos — the same depth of indigo and the same contrast. Do NOT lighten, wash out or desaturate.
 
 SUBJECT DETAILS (must be accurate):
 ${(g.details || []).map((d) => `- ${d}`).join("\n")}
@@ -117,11 +115,10 @@ const slots = slotsOf(mod);
 let md = `# ${mod.meta.series} — Gemini用プロンプト（自動生成）\n\n`;
 md += `生成コマンド: \`node tools/gemini_prompts.mjs ${topic}\`（データを直したら再実行すれば作り直せる）\n\n`;
 md += `## 使い方\n`;
-md += `1. Geminiで**新しいチャット**を開く（前のトピックの絵に引っ張られないように）。\n`;
-md += `2. 番号ごとに「添付」欄のファイルをこのフォルダからアップロードし、プロンプトを貼る。\n`;
-md += `3. できた画像は、番号を添えてClaudeのチャットに貼る（例:「05」と書いて画像を貼る）。\n`;
-md += `4. 崩れたら同じチャットで修正指示、2回直してもダメなら新しいチャットでやり直す。\n`;
-md += `5. 一度うまくできた画像は、次からSTYLE見本の代わりに添付するとタッチがそろいやすい。\n\n`;
+md += `1. **番号ごとにGeminiの新しいチャット**を開く（前の絵に引っ張られないように）。\n`;
+md += `2. 「添付」欄のファイルを**書いてある順番どおり**にアップロードし、プロンプトを貼る。\n`;
+md += `3. できた画像は、番号を添えてClaudeのチャットに貼る（例:「05」と書いて画像を貼る。何枚まとめてでもOK）。\n`;
+md += `4. 余計な物が足された・形が変わった時は、同じチャットで直すより新しいチャットでやり直す方が早い。\n\n`;
 
 const missing = [];
 for (const slot of slots) {
@@ -129,25 +126,28 @@ for (const slot of slots) {
     missing.push(slot.no);
     continue;
   }
-  // 表紙は meta.heroRefs（配列）で参考写真を複数枚添付できる（1枚の写真の描き写しにならないように）
-  const refs =
-    slot.kind === "cover" && mod.meta.heroRefs
-      ? mod.meta.heroRefs.map((r, i) => copyIn(r, `${slot.no}_ref_${i + 1}`))
-      : [copyIn(slot.ref, `${slot.no}_ref`)];
-  const ref = refs.filter(Boolean).join(" ＋ ");
-  // heroGemini.styleImage … 表紙専用の画風見本（シルエットが写らない質感の切り抜き等）。styleより優先
-  const styleFile =
-    slot.kind === "cover" && slot.gemini.styleImage
-      ? [].concat(slot.gemini.styleImage).map((f, i, arr) => copyIn(f, arr.length > 1 ? `${slot.no}_style_${i + 1}` : `${slot.no}_style`)).join(" ＋ ")
-      : slot.kind === "cover" && slot.gemini.style !== "detail" ? styleCover
-      : slot.gemini.faithful ? null // 写真忠実モードは写真1枚だけ（見本の絵を付けると、見本の方を描き直されたため）
-      : styleDetail;
+  const g = slot.gemini;
+  let attach, prompt;
+  if (slot.kind === "cover") {
+    const heroRefs = mod.meta.heroRefs || [mod.meta.heroRef].filter(Boolean);
+    const styleImgs = [style.cover, ...[].concat(g.styleImage || [])].filter(Boolean);
+    const styles = styleImgs.map((f, i) => copyIn(f, `${slot.no}_style_${i + 1}`));
+    const refs = heroRefs.map((r, i) => copyIn(r, `${slot.no}_ref_${i + 1}`));
+    attach = [...styles, ...refs];
+    prompt = coverPrompt(g, styles.length, refs.length);
+  } else if (isFaithful(g)) {
+    attach = [copyIn(slot.ref, `${slot.no}_ref`)]; // 写真1枚だけ
+    prompt = faithfulPrompt(g);
+  } else {
+    attach = [copyIn(style.detail, "STYLE_detail"), copyIn(slot.ref, `${slot.no}_ref`)];
+    prompt = redrawPrompt(g);
+  }
   md += `---\n\n## ${slot.no}｜${slot.eraLabel}｜${slot.caption}\n\n`;
-  md += `- 添付: ${[styleFile, ref].filter(Boolean).join(" ＋ ") || "（なし）"}\n`;
+  md += `- 添付（この順番で）: ${attach.filter(Boolean).join(" ＋ ") || "（なし）"}\n`;
   md += `- 保存先: assets/${slot.photo || "（data に photo 未設定）"}\n`;
-  md += `- 確認ポイント: ${slot.gemini.check || slot.gemini.key || (slot.gemini.details || []).join(" / ")}\n\n`;
-  md += "```\n" + (slot.kind === "cover" ? coverPrompt(slot) : detailPrompt(slot)) + "\n```\n\n";
+  md += `- 確認ポイント: ${g.check || g.key || (g.details || []).join(" / ")}\n\n`;
+  md += "```\n" + prompt + "\n```\n\n";
 }
 fs.writeFileSync(path.join(outDir, "PROMPTS.md"), md);
 console.log(`作成: ${path.join(outDir, "PROMPTS.md")}（${slots.length - missing.length}件）`);
-if (missing.length) console.log(`gemini 指定が無いため飛ばしたスロット: ${missing.join(", ")}`);
+if (missing.length) console.log(`gemini 指定が無いため飛ばしたスロット（使い回し等）: ${missing.join(", ")}`);

@@ -10,6 +10,7 @@ description: Final stage of a VINTAGE FIELD NOTES content_studio carousel — on
 
 ## 1. 最終レンダリング
 ```bash
+node tools/check_topic.mjs <topic>             # データが壊れていないか（項目の消失・数のずれ）
 node tools/ingest.mjs <topic> --status        # 全スロット「済」か確認（未があれば先に vfn-assets）
 node render_era_slides.mjs <topic>            # 公開版（Geminiイラストのみ）
 ```

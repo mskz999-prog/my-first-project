@@ -33,7 +33,7 @@ export const meta = {
   heroGemini: {
     // 2026-11-21 方針: 形と置き方は実物写真3枚に忠実に、画風は前回表紙の質感の切り抜き（シルエットが写らない）を見本に
     // 1枚目: VANS表紙（水彩タッチの見本・靴なので形は真似されない） 2枚目: 前回表紙の胸まわり切り抜き（荒い生地感の見本）
-    styleImage: ["covers/vans_authentic_hero.jpg", "_private_ref/levis_507xx_eras/hero_texture.jpg"],
+    styleImage: "_private_ref/levis_507xx_eras/hero_texture.jpg", // VANS表紙は _brand の geminiStyle.cover から自動で1枚目に付く
     intro: "Create a hand-drawn watercolor illustration of a 1950s Levi's 507XX Type II denim jacket, front view, laid flat and buttoned. Attachments: the FIRST image (a pair of sneakers) is the drawing-style sample — copy only its technique, not its subject. The SECOND image is a close-up crop showing the denim character I want (it does not show the jacket shape). The other THREE images are photos of real original 507XX jackets. Follow these photos faithfully for the jacket's shape, proportions and how it lies flat: the body, sleeves, collar, yoke, pockets, pleats and buttons should look like them. Natural vintage wear and individual character (fading, fraying, small repairs, stains) are welcome. Do not reproduce the photos' backgrounds or lighting.",
     styleText: "hand-drawn watercolor illustration in the style of the FIRST (sneaker) sample: soft graphite pencil outlines and sketch lines, transparent layered watercolor washes, gentle soft-edged shading, warm ivory textured paper with a loose wash vignette. Within that watercolor style, keep the rugged character of the vintage denim from the SECOND sample: mottled indigo, visible diagonal twill hatching, irregular vertical fading, pale abraded edges and roped seams. Painterly and soft — not photorealistic, not glossy, not cartoonish.",
     subject: "a 1950s Levi's 507XX Type II denim jacket",
