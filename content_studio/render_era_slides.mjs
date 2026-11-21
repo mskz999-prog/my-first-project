@@ -40,10 +40,14 @@ const BG = meta.bg || "#F4F3EF";
 const ILLUSTRATORS = { heelPatch, sideTag, sole, insole, shoeSole, storefront, skateboard };
 
 // 未配置の photo を取り除いた eras（取り除いた項目は SVG イラストで仮表示される）
-const eras = topicModule.eras.map((era) => ({
+const stripMissing = (era) => ({
   ...era,
   media: era.media.map((m) => (m.photo && !photoExists(m.photo) ? { ...m, photo: undefined } : m)),
-}));
+});
+const eras = topicModule.eras.map(stripMissing);
+// extras（任意）: 年代ページと同じ見た目の「特集ページ」（例: 507XXの脇ハギ解説）。
+// 年代ページの後・早見ガイドの前に入り、早見ガイドの表には含めない。
+const extras = (topicModule.extras || []).map(stripMissing);
 
 const photoDataUriCache = new Map();
 function photoDataUri(relPath) {
@@ -102,6 +106,8 @@ function tai(innerHtml) {
 
 function sharedStyle() {
   return `
+  /* 日本語の本文を単語の途中（「チェー／ン」等）で折り返さない（Chromiumの文節単位改行） */
+  li { word-break: auto-phrase; }
   /* photoFit: "cover" 用：枠いっぱいに写真を描く（枠の外寸は余白ありのときと同じ） */
   .media-art.photo-fill { padding: 0; height: 166px; }
   .idx-thumb.photo-fill { padding: 0; overflow: hidden; }
@@ -943,22 +949,23 @@ for (const f of fs.readdirSync(OUT_DIR)) {
 
 const SPREAD_SIZE = 1; // 1ページあたりの年代数
 const spreads = chunk(eras, SPREAD_SIZE);
-const total = spreads.length + 3; // 表紙 + 年代スプレッド + まとめ + フォロー誘導（固定）
+const pageSpreads = [...spreads, ...extras.map((x) => [x])]; // 年代ページ → 特集ページ
+const total = pageSpreads.length + 3; // 表紙 + 年代スプレッド/特集 + まとめ + フォロー誘導（固定）
 
 await page.setContent(coverHtml(total), { waitUntil: "load" });
 const coverPath = path.join(OUT_DIR, `${PREFIX}_01_cover.png`);
 await page.screenshot({ path: coverPath, clip: { x: 0, y: 0, width: WIDTH, height: HEIGHT } });
 console.log(`Saved: ${coverPath}`);
 
-for (let i = 0; i < spreads.length; i++) {
-  const html = spreadHtml(spreads[i], i + 2, total);
+for (let i = 0; i < pageSpreads.length; i++) {
+  const html = spreadHtml(pageSpreads[i], i + 2, total);
   await page.setContent(html, { waitUntil: "load" });
   const outPath = path.join(OUT_DIR, `${PREFIX}_${String(i + 2).padStart(2, "0")}.png`);
   await page.screenshot({ path: outPath, clip: { x: 0, y: 0, width: WIDTH, height: HEIGHT } });
   console.log(`Saved: ${outPath}`);
 }
 
-const summaryIndex = spreads.length + 2;
+const summaryIndex = pageSpreads.length + 2;
 await page.setContent(summaryHtml(eras, summary, summaryIndex, total), { waitUntil: "load" });
 const summaryPath = path.join(OUT_DIR, `${PREFIX}_${String(summaryIndex).padStart(2, "0")}_summary.png`);
 await page.screenshot({ path: summaryPath, clip: { x: 0, y: 0, width: WIDTH, height: HEIGHT } });

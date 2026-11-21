@@ -116,7 +116,7 @@ async function get(topic, urls, kws) {
         isMarket
       );
       let k = 0;
-      for (const s of srcs.slice(0, 20)) {
+      for (const s of srcs.slice(0, Number(flags.max) || 20)) { // --max=40 で枚数上限を変更可
         const r = await page.request.get(s.includes("yimg.jp") ? s.split("?")[0] : s);
         if (!r.ok()) continue;
         const out = path.join(dir, `${id}_${String(k++).padStart(2, "0")}.jpg`);

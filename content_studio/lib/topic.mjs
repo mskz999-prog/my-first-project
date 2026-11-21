@@ -3,7 +3,7 @@
 //
 // 番号の振り方（固定）:
 //   00            … 表紙（meta.heroImage）
-//   01, 02, ...   … 年代1の media[0], media[1], ... → 年代2 → ... の順に通し番号
+//   01, 02, ...   … 年代1の media[0], media[1], ... → 年代2 → ... → extras（特集ページ）の順に通し番号
 //
 // 例: 3年代×4項目なら 00〜12 の13スロット。
 
@@ -35,7 +35,7 @@ export function slotsOf(mod) {
     },
   ];
   let n = 1;
-  for (const era of mod.eras) {
+  for (const era of [...mod.eras, ...(mod.extras || [])]) {
     for (const m of era.media) {
       slots.push({
         no: String(n++).padStart(2, "0"),
