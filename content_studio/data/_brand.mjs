@@ -24,10 +24,15 @@ export const brand = {
   // いちばん下の黒いボタンの文言
   cta: "Follow for the next drop",
   // Gemini用プロンプト（tools/gemini_prompts.mjs）で毎回添付する「タッチの見本」。
-  // 表紙用と、ディテール用（ディテール用は旧来の描き直しモードでだけ使う。標準の写真忠実モードでは添付しない）。
+  // 表紙用と、ディテール用（写真忠実モードでは写真の後に2枚目として添付する）。
   geminiStyle: {
     // 表紙の画風見本は「形が写らない物」にする（507XXで557の表紙を付けたらサードの形を真似された）。靴の絵なら服の形に影響しない
     cover: "covers/vans_authentic_hero.jpg",
-    detail: "levis_557/e2_button_d.jpg",
+    // ディテール用は「デニムの網目だけ」の横長切り抜き（506XX 01の絵から）。
+    // 557のDボタンの絵を付けたら写真を無視してDボタンを描き直され、縦長の切り抜きを付けたらそれを下地にされた。
+    // → 物が写っていない・写真と同じ横長の見本にする。2段階方式の②塗りで添付する。
+    detail: "style_samples/denim_hatching_wide.jpg",
+    // 557方式（今の標準）の画風見本。2枚目に「技法だけ」として付ける。靴の絵なので服の形が移らない（506XX 04で成功）
+    sketch: "covers/vans_authentic_hero.jpg",
   },
 };

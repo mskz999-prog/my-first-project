@@ -5,10 +5,25 @@
 //   → assets/_private_ref/<topic>/gemini/ に
 //      PROMPTS.md（番号ごとの添付ファイルとプロンプト）と、添付用にコピーした参考写真・スタイル見本を作る
 //
-// ■ 標準のやり方（Levi's 507XXで確立。これ以外は崩れやすかった）
+// ■ 今の標準（506XX 04〜）: 細部は「557方式」= 写真は参考だけ・描く物を英語で名指し・VANSの靴の絵を技法見本に、1回で描き起こし（sketchPrompt）。
+//   以下の「写真に忠実」「2段階」は過去の経緯（gemini.twoStep / gemini.oneStep: true で今も使える）。
+// ■ 旧標準（Levi's 507XXで確立）
 //   細部（01〜）… 「写真に忠実」モード。参考写真1枚だけを添付し、そのまま水彩イラスト化させる。
-//                 見本の絵は付けない（見本の方を描き直される）。比率は写真のまま（違う比率を指定すると描き足される）。
+//                 比率は写真のまま（違う比率を指定すると描き足される）。
+//                 506XXから: 写真1枚だけだと実写のまま返るようになったため、写真を1枚目・成功した絵（geminiStyle.detail）を
+//                 2枚目に「技法だけ」の見本として付ける（507XXでは見本を先に付けて見本の方を描き直されたので、必ず写真が先）。
+//                 見本を付けたくない項目は gemini.noStyle: true。
+//                 見本は「デニムの網目だけ」の切り抜き（style_samples/denim_hatching_crop.jpg）。物が写った絵（557のDボタン）を
+//                 付けたら写真を無視してDボタンを描き直された（506XX 01）。一発目は写真っぽく返りやすいが、手順5の「一押し文」で絵になった。
 //                 色も写真どおり（水彩と言うだけだと色が薄くなる）。
+//   ★506XX 02で確立した「2段階」方式（今の標準。gemini.oneStep: true で旧来の1発版）:
+//     ① 新しいチャットに写真1枚だけ → 黒インクの線画にさせる（形の正確さはここで決まる。写真のまま返されることも、
+//        見本を下地にされることも無い）。線画を点検し、ダメなら新しいチャットでやり直す。
+//     ② 同じチャットで画風見本（デニムの網目の横長切り抜き）を添付 → 線画に水彩で色を塗らせる。
+//        色の指定（藍・からし色の糸・真鍮など）は最初の塗りの指示に全部書く（後から同じチャットで直させても
+//        直前の絵に引っ張られてほぼ直らなかった）。塗りが気に入らない時は「直して」と頼まず、②の指示を送り直す。
+//     ③ 取り込み後、必要なら tools/color_match.mjs で色の傾向だけ参考写真に寄せる（形は変えない）。
+//     元写真を②で色見本として渡すのはNG（傷を創作・刻印が消えた）。写真に水彩フィルターをかける方式は実写のままでNG。
 //   表紙（00）… 実物写真を複数枚（meta.heroRefs）＋画風見本（_brand の geminiStyle.cover＝VANS表紙）。
 //                 画風見本は「形が写らない物」にする（別モデルの服の絵を付けると形を真似される）。
 //   → 参考写真の出来がそのまま絵の出来になる。先に tools/prep_ref.mjs で下ごしらえ・点検すること。
@@ -56,19 +71,70 @@ function copyIn(rel, name) {
 const COLOR_RULE =
   "COLOR: match the photo's colors, values and contrast exactly — the same depth of indigo, the same darks and highlights, the same thread and leather colors. Do NOT lighten, wash out, pastelize or desaturate anything; use the watercolor at full pigment strength.";
 
-// ---- 細部：写真に忠実モード（標準） ----
+// ---- 細部：2段階モード（標準・506XX 02で確立） ----
+// 色の既定値（Levi'sのデニム物）。項目ごとに gemini.colors（英語の配列）で上書きできる。
+const DEFAULT_COLORS = [
+  "Denim: blue indigo (not grey, not teal), deep in the shadows, with lighter faded areas and worn edges where the photo shows them",
+  "Stitching thread: the same color as in the photo (on vintage Levi's usually golden ochre / mustard yellow) — never pure white",
+  "Metal (buttons, rivets, buckles): aged brass or copper, warm and slightly darkened",
+  "Red tab (if any): deep red",
+];
+function lineArtPrompt(g) {
+  return `Make a black ink LINE DRAWING of this photo on plain white paper: pen outlines of every edge, seam and stitch line, and fine diagonal hatching lines for the denim weave. No color, no shading from the photo — only black ink lines. Same framing, angle and aspect ratio as the photo. Nothing added, nothing removed.
+
+Must be clearly drawn: ${g.key}${g.text ? `\nLettering: copy it exactly as it appears in the photo (${g.text}).` : ""}
+${(g.notes || []).length ? "\n" + g.notes.map((x) => `- ${x}`).join("\n") + "\n" : ""}
+No added text, no watermark.`;
+}
+function paintPrompt(g) {
+  const colors = g.colors || DEFAULT_COLORS;
+  return `Now paint the LINE DRAWING with rich watercolor on warm ivory paper. The attached image is only a technique sample — do not draw it, just match its look: dense fine ink hatching over the denim, layered watercolor washes, visible brush strokes and soft blooms.
+
+Colors (as in the photo I attached first — full strength, do not lighten or pastelize):
+${colors.map((c) => `- ${c}`).join("\n")}
+
+Texture — it must look like REAL, WELL-WORN VINTAGE denim, not new and not a clean engraving:
+- mottled, streaky vertical fading with many small lighter worn patches, uneven pigment, darker indigo pooling in the recesses
+- the flap edges, seams and pocket edges rubbed lighter and slightly fuzzy, the stitching a little sunken into the fabric
+- the hatching irregular in density, broken up by the watercolor — not even, mechanical lines
+
+- Keep every ink line exactly as drawn. Add nothing — no holes, rips, stains or spots that are not in the photo.${g.text ? `\n- Keep the lettering ${g.text} readable.` : ""}
+- Paint the denim all the way to every edge and corner of the picture — no white or ivory paper showing anywhere.
+- It must look hand-painted, not like a photo.`;
+}
+
+// ---- 細部：557方式（今の標準。506XX 04で復活・確認） ----
+// 「この写真を水彩にして」と頼むと、写真のまま返る／見本と合成される／見本を描き直される失敗が続いた。
+// 557XXで成功していた「写真は参考にするだけ。描く物を言葉で名指しして、新しく描き起こさせる」頼み方に戻したら1回で通った。
+// 見本は物の形が服に移らないVANSの靴の絵（geminiStyle.sketch）。2枚目に「技法だけ」と明記する。
+function sketchPrompt(g) {
+  return `Using the FIRST attached photo only as a reference, create an original hand-drawn ${/, close-up$/.test(g.item) ? "close-up " : ""}illustration of ${g.item.replace(/, close-up$/, "")}. Redraw it — do not trace the photo. The SECOND image (a pair of sneakers) is a drawing-style sample only — copy its technique, not its subject.
+
+STYLE: fine graphite pencil linework with soft, layered watercolor washes on warm ivory textured paper, visible sketch lines and slightly loose hand-drawn edges. Muted natural colors: deep indigo denim with faded highlights along the seams and edges, tan/ecru thread stitching, aged copper or brass metal. Editorial field-notebook feel — not photorealistic, not cartoonish.
+
+The detail must stay clearly readable: ${g.key}.${g.text ? `\nKeep the lettering exactly: ${g.text}` : ""}
+${(g.notes || []).length ? g.notes.map((x) => `- ${x}`).join("\n") + "\n" : ""}4:3 canvas, the detail fills the frame. No extra text, no watermark.`;
+}
+
+// ---- 細部：写真に忠実モード（1発版。gemini.oneStep: true の時だけ） ----
 // 4:3など写真と違う比率を指定すると、足りない部分を描き足してボタン等が増えた。
 // 画風の説明に「金属」等の物の名前を入れると、それも描き足されやすかった。→ 比率は写真のまま・画風は最小限の言葉で。
-function faithfulPrompt(g) {
-  return `This is a STYLE-TRANSFER task only — like applying a watercolor filter to the attached photo. Only ONE image is attached: the photo.
+function faithfulPrompt(g, hasStyle) {
+  // 506XXの01で「水彩フィルター」と書いたら、写真をシャープにしただけの実写風が返ってきた
+  // → 「手描きの絵だと一目で分かること」を構図の指示とは別に、はっきり要求する
+  const attachLine = hasStyle
+    ? "Two images are attached. The FIRST image is the PHOTO: take everything you draw from it. The SECOND image is a small STYLE SAMPLE showing only how to draw denim: copy ONLY its technique — dense fine dark ink hatching lines over the weave, layered indigo watercolor washes, ivory paper showing through. It is not part of the picture."
+    : "Only ONE image is attached: the photo.";
+  return `Turn the attached photo into a HAND-PAINTED WATERCOLOR ILLUSTRATION. ${attachLine} Keep the photo's composition exactly, but the result must be an obvious painting, not a photo.
 
-Output the SAME image as the photo, just rendered as a hand-drawn watercolor:
+Output the SAME composition as the photo, repainted by hand in watercolor:
 - the same crop, framing, angle and aspect ratio as the photo — do NOT extend, zoom out or re-frame
 - every object, seam, stitch line, edge, fold and wrinkle exactly where it is in the photo, in the same number
 - add NOTHING that is not in the photo (no buttons, rivets, stitches, tabs, labels, tools, hands, text) and remove nothing
 - if anything is unclear, copy the photo as it is — never invent
 
-Medium: fine ink linework with rich, layered watercolor on warm ivory paper, fabric grain shown with fine hatching.
+Medium: fine ink linework with rich, layered watercolor on warm ivory paper; the fabric weave drawn with dense, fine diagonal ink hatching lines${hasStyle ? " exactly like the STYLE SAMPLE" : ""}.
+It MUST read at first glance as a hand-made illustration: a thin dark ink outline around every part, visible brush strokes, soft watercolor blooms and edges, the paper texture showing through, slightly simplified surfaces. NOT a photograph, NOT a photo filter, NOT a sharpened or enhanced photo, NOT 3D-rendered.
 ${COLOR_RULE}
 
 Must stay clearly visible: ${g.key}${g.text ? `\nLettering: copy it exactly as it appears in the photo (${g.text}).` : ""}
@@ -115,10 +181,12 @@ const slots = slotsOf(mod);
 let md = `# ${mod.meta.series} — Gemini用プロンプト（自動生成）\n\n`;
 md += `生成コマンド: \`node tools/gemini_prompts.mjs ${topic}\`（データを直したら再実行すれば作り直せる）\n\n`;
 md += `## 使い方\n`;
-md += `1. **番号ごとにGeminiの新しいチャット**を開く（前の絵に引っ張られないように）。\n`;
-md += `2. 「添付」欄のファイルを**書いてある順番どおり**にアップロードし、プロンプトを貼る。\n`;
-md += `3. できた画像は、番号を添えてClaudeのチャットに貼る（例:「05」と書いて画像を貼る。何枚まとめてでもOK）。\n`;
-md += `4. 余計な物が足された・形が変わった時は、同じチャットで直すより新しいチャットでやり直す方が早い。\n\n`;
+md += `### 細部（01〜）は557方式（1回で描き起こし）\n`;
+md += `1. **番号ごとにGeminiの新しいチャット**を開き、①NN_ref.jpg（写真）→ ②STYLE_sketch.jpg（靴の絵）の**順番で**添付して、プロンプトを貼る。\n`;
+md += `2. 形が写真と多少ずれてもOK。**確認ポイントが合っていれば合格**。合わなければ同じチャットで直させず、新しいチャットでもう一度。\n`;
+md += `3. できた画像は、番号を添えてClaudeのチャットに貼る（例:「05」と書いて画像を貼る）。\n\n`;
+md += `### 表紙（00）と1発版（oneStep）だけ\n`;
+md += `写真っぽいまま（イラストになっていない）時だけ、同じチャットで次を送る:\n\n\`\`\`\nThis still looks like a photo. Repaint it completely by hand: ink outlines on every edge, the whole denim covered with dense ink hatching like the second image, watercolor washes on ivory paper. Same composition, nothing added.\n\`\`\`\n\n`;
 
 const missing = [];
 for (const slot of slots) {
@@ -135,9 +203,23 @@ for (const slot of slots) {
     const refs = heroRefs.map((r, i) => copyIn(r, `${slot.no}_ref_${i + 1}`));
     attach = [...styles, ...refs];
     prompt = coverPrompt(g, styles.length, refs.length);
+  } else if (isFaithful(g) && !g.oneStep && !g.twoStep) {
+    attach = [copyIn(slot.ref, `${slot.no}_ref`), copyIn(style.sketch || style.cover, "STYLE_sketch")];
+    prompt = sketchPrompt(g);
+  } else if (isFaithful(g) && g.twoStep) {
+    const ref = copyIn(slot.ref, `${slot.no}_ref`);
+    const st = style.detail ? copyIn(style.detail, "STYLE_detail") : null;
+    md += `---\n\n## ${slot.no}｜${slot.eraLabel}｜${slot.caption}\n\n`;
+    md += `- 保存先: assets/${slot.photo || "（data に photo 未設定）"}\n`;
+    md += `- 確認ポイント: ${g.check || g.key}\n\n`;
+    md += `**① 線画**（新しいチャット・添付: ${ref}）\n\n` + "```\n" + lineArtPrompt(g) + "\n```\n\n";
+    md += `**② 塗り**（同じチャット・添付: ${st || "（なし）"}）\n\n` + "```\n" + paintPrompt(g) + "\n```\n\n";
+    continue;
   } else if (isFaithful(g)) {
-    attach = [copyIn(slot.ref, `${slot.no}_ref`)]; // 写真1枚だけ
-    prompt = faithfulPrompt(g);
+    // 506XXで写真1枚だけだと実写のまま返ってきた → 写真を1枚目、成功した絵（_brand の geminiStyle.detail）を2枚目に「技法だけ」の見本として付ける
+    const st = style.detail && g.noStyle !== true ? copyIn(style.detail, "STYLE_detail") : null;
+    attach = [copyIn(slot.ref, `${slot.no}_ref`), st];
+    prompt = faithfulPrompt(g, !!st);
   } else {
     attach = [copyIn(style.detail, "STYLE_detail"), copyIn(slot.ref, `${slot.no}_ref`)];
     prompt = redrawPrompt(g);
