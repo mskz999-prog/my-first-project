@@ -890,12 +890,15 @@ function tagChapterHtml(era, index, total) {
 </html>`;
 }
 // まとめ（タグ早見ガイド）: 章ごとに1行、左に章名＋年代幅、右にその章のタグを年代バッジ付きで並べる。
+// 行（章）が3行以下だと見出しと表の間が空きすぎるので、タグ画像を少し大きくし、下の余白も減らす（BIG MACで追加）。
 function tagSummaryHtml(erasList, summaryData, index, total) {
+  const few = erasList.length <= 3;
+  const artH = few ? 195 : 150;
   const rows = erasList.map((era) => `
     <div class="ts-row">
       <div class="ts-left">
         <div class="ts-range">${era.range}</div>
-        <div class="ts-name">${era.name}</div>
+        <div class="ts-name">${era.summaryName || era.name}</div>
       </div>
       <div class="ts-tags">${era.media.map((m) => `
         <div class="ts-tag">
@@ -911,7 +914,7 @@ function tagSummaryHtml(erasList, summaryData, index, total) {
   ${sharedStyle()}
   .ts-head { text-align: center; margin: 26px 0 22px; }
   .ts-head h2 { margin: 0; font-size: 46px; color: #1a1a1a; letter-spacing: 4px; }
-  .ts-list { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 18px; padding-bottom: 120px; }
+  .ts-list { flex: 1; display: flex; flex-direction: column; justify-content: center; ${few ? "gap: 22px; padding-bottom: 130px;" : "gap: 18px; padding-bottom: 120px;"} }
   .ts-row { display: flex; align-items: center; gap: 18px; background: #fffdf6; border: 1.5px solid #262019;
     border-radius: 14px; padding: 14px 18px; }
   .ts-left { width: 250px; flex: none; }
@@ -920,7 +923,7 @@ function tagSummaryHtml(erasList, summaryData, index, total) {
   .ts-name { margin-top: 8px; font-size: 23px; font-weight: 800; color: #262019; line-height: 1.3; }
   .ts-tags { flex: 1; display: flex; gap: 12px; }
   .ts-tag { width: 200px; text-align: center; }
-  .ts-art { height: 150px; background: ${TAG_FRAME_BG}; border: 1.5px solid #1a1a1a; border-radius: 10px;
+  .ts-art { height: ${artH}px; background: ${TAG_FRAME_BG}; border: 1.5px solid #1a1a1a; border-radius: 10px;
     box-shadow: inset 0 0 24px rgba(120,105,80,.18);
     display: flex; align-items: center; justify-content: center; overflow: hidden; }
   .ts-art img { max-width: calc(100% - 20px); max-height: calc(100% - 16px); mix-blend-mode: multiply;

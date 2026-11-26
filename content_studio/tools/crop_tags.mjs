@@ -18,9 +18,16 @@ if (!topic) {
   process.exit(1);
 }
 const mod = await loadTopic(topic);
-const src = path.join(ASSETS_DIR, mod.meta.sourceImage);
-if (!fs.existsSync(src)) throw new Error(`元の写真がありません: ${mod.meta.sourceImage}`);
+// タグごとに別の写真から切り出したいときは media[].src に元写真（assets/ からの相対パス）を書く（BIG MACで追加）。
+// 大きめの写真は SCALE 倍にすると巨大になるので、幅が maxW を超えない範囲で拡大する。
+const srcOf = (m) => {
+  const rel = m.src || mod.meta.sourceImage;
+  const p = path.join(ASSETS_DIR, rel);
+  if (!fs.existsSync(p)) throw new Error(`元の写真がありません: ${rel}`);
+  return p;
+};
 const SCALE = 3;
+const MAX_W = 1200;
 
 let n = 0;
 for (const era of mod.eras) {
@@ -29,9 +36,9 @@ for (const era of mod.eras) {
     const [x0, y0, x1, y1] = m.crop;
     const out = path.join(ASSETS_DIR, m.photo);
     fs.mkdirSync(path.dirname(out), { recursive: true });
-    await sharp(src)
+    await sharp(srcOf(m))
       .extract({ left: x0, top: y0, width: x1 - x0, height: y1 - y0 })
-      .resize({ width: (x1 - x0) * SCALE, kernel: "lanczos3" })
+      .resize({ width: Math.min((x1 - x0) * SCALE, Math.max(MAX_W, x1 - x0)), kernel: "lanczos3" })
       .jpeg({ quality: 95 })
       .toFile(out);
     console.log(`○ ${m.caption} → ${m.photo}`);
