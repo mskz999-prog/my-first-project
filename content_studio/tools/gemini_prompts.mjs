@@ -169,7 +169,7 @@ function coverPrompt(g, styleCount, photoCount) {
   return `${intro}
 
 STYLE: ${styleText}
-COLOR: take the colors from the photos — the same depth of indigo and the same contrast. Do NOT lighten, wash out or desaturate.
+COLOR: ${g.colorText || "take the colors from the photos — the same depth of indigo and the same contrast. Do NOT lighten, wash out or desaturate."}
 
 SUBJECT DETAILS (must be accurate):
 ${(g.details || []).map((d) => `- ${d}`).join("\n")}

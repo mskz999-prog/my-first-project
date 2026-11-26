@@ -734,6 +734,218 @@ function summaryHtml(erasList, summaryData, index, total) {
 }
 
 // 全トピック共通の最終ページ：フォロー・保存・シェアへの誘導（設定は data/_brand.mjs）。
+// ─── TAG ARCHIVE レイアウト（meta.layout === "tagArchive"）────────────────────────
+// Five Brotherで作った「タグだけを年代順に追う」フォーマット。1ページ＝1章（タグ2〜6枚）。
+// 各タグの下に黒い年代バッジ（media.year）と2行キャプション（media.desc、<br>で改行）を出す。
+// 枚数で並べ方が変わる: 1〜2枚=縦1列 / 3〜4枚=2列（3枚なら下の1枚は中央） / 5〜6枚=3列。
+// タグ写真は明るいベージュの枠に「乗算」で置き、写真の白い余白を背景になじませる（浮いて見えないように）。
+const TAG_FRAME_BG = "#E9E5DC";
+function tagLayout(n) {
+  if (n <= 2) return { cols: 1, artH: 236, cardW: 640 };
+  if (n <= 4) return { cols: 2, artH: 250, cardW: 449 };
+  return { cols: 3, artH: 250, cardW: 292 };
+}
+function tagArtHtml(item) {
+  return item.photo
+    ? `<img src="${photoDataUri(item.photo)}" alt="${item.caption}">`
+    : ILLUSTRATORS[item.type](item.props);
+}
+function tagStyle() {
+  return `
+  .era-heading { text-align: center; width: 100%; margin-bottom: 26px; }
+  .era-name {
+    font-size: 50px;
+    color: #262019;
+    margin: 0;
+  }
+  .era-divider {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 18px;
+    margin-top: 18px;
+  }
+  .era-divider-line {
+    flex: 1;
+    max-width: 230px;
+    height: 2px;
+    background: #3a332a;
+    opacity: 0.35;
+  }
+  .era-badge {
+    display: inline-block;
+    background: #262019;
+    color: #f0f0ee;
+    font-size: 21px;
+    font-weight: 700;
+    padding: 6px 22px;
+    border-radius: 8px;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+  }
+  .points {
+    background: #fffdf6;
+    border: 1.5px solid #262019;
+    border-radius: 16px;
+    padding: 22px 30px;
+    margin: 0 6px;
+    max-width: 920px;
+    width: 100%;
+    box-sizing: border-box;
+  }
+  .points-heading {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 14px;
+  }
+  .points-label {
+    font-family: "Bebas Neue", "IPAGothic", sans-serif;
+    font-size: 21px;
+    letter-spacing: 3px;
+    color: #262019;
+    white-space: nowrap;
+  }
+  .points-line {
+    flex: 1;
+    height: 2px;
+    background: #262019;
+    opacity: 0.25;
+  }
+  .points ul {
+    margin: 0;
+    padding-left: 26px;
+    font-size: 23px;
+    line-height: 1.6;
+    color: #262019;
+  }
+  .points ul strong { font-weight: 700; }
+  .tag-content { flex: 1; display: flex; flex-direction: column; align-items: center; padding-bottom: 70px; }
+  .tag-content .era-heading { margin: 26px 0 22px; }
+  .tag-grid { flex: 1; display: flex; flex-wrap: wrap; gap: 22px; width: 100%; max-width: 920px;
+    align-content: center; justify-content: center; }
+  .tag-card { display: flex; flex-direction: column; }
+  .tag-art { background: ${TAG_FRAME_BG}; border: 1.5px solid #1a1a1a; border-radius: 12px;
+    box-shadow: inset 0 0 40px rgba(120,105,80,.18);
+    display: flex; align-items: center; justify-content: center; overflow: hidden; }
+  .tag-art img { max-width: calc(100% - 40px); max-height: calc(100% - 30px); display: block;
+    mix-blend-mode: multiply; filter: brightness(1.07) contrast(1.06); }
+  .tag-art svg { max-width: 80%; max-height: 80%; }
+  .tag-cap { margin-top: 12px; text-align: center; }
+  .tag-year { display: inline-block; font-size: 23px; font-weight: 800; color: #f0f0ee; background: #262019;
+    border-radius: 8px; padding: 4px 18px; letter-spacing: .5px; }
+  .tag-desc { margin-top: 8px; font-size: 18px; line-height: 1.5; color: #4a4a47; }
+  .tag-desc strong { color: #262019; font-weight: 700; }
+  .tag-content .points { margin: 22px 0 0; }
+  `;
+}
+function tagChapterHtml(era, index, total) {
+  const L = tagLayout(era.media.length);
+  const cards = era.media.map((m) => `
+    <div class="tag-card" style="width:${L.cardW}px">
+      <div class="tag-art" style="height:${L.artH}px">${tagArtHtml(m)}</div>
+      <div class="tag-cap">
+        <span class="tag-year">${m.year || m.caption}</span>
+        ${m.desc ? `<div class="tag-desc">${emphasizeQuoted(m.desc)}</div>` : ""}
+      </div>
+    </div>`).join("");
+  const bulletsHtml = era.bullets.map((b) => `<li>${emphasizeQuoted(b)}</li>`).join("");
+  return `<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<style>
+  ${sharedStyle()}
+  ${tagStyle()}
+</style>
+</head>
+<body>
+  <div class="slide">
+    <div class="topbar">
+      <div class="brand">${BRAND} ・ ${SERIES}</div>
+      <div class="page">${index} / ${total}</div>
+    </div>
+    <div class="tag-content">
+      <div class="era-heading">
+        <h2 class="era-name display-title">${era.name}</h2>
+        <div class="era-divider">
+          <span class="era-divider-line"></span>
+          <span class="era-badge">${era.range}</span>
+          <span class="era-divider-line"></span>
+        </div>
+      </div>
+      <div class="tag-grid">${cards}</div>
+      <div class="points">
+        <div class="points-heading">
+          <span class="points-label">CHECK POINT</span>
+          <span class="points-line"></span>
+        </div>
+        ${tai(`<ul>${bulletsHtml}</ul>`)}
+      </div>
+    </div>
+    <div class="swipe-hint-sub">SWIPE →</div>
+    <div class="flourish">${SERIES}</div>
+  </div>
+</body>
+</html>`;
+}
+// まとめ（タグ早見ガイド）: 章ごとに1行、左に章名＋年代幅、右にその章のタグを年代バッジ付きで並べる。
+function tagSummaryHtml(erasList, summaryData, index, total) {
+  const rows = erasList.map((era) => `
+    <div class="ts-row">
+      <div class="ts-left">
+        <div class="ts-range">${era.range}</div>
+        <div class="ts-name">${era.name}</div>
+      </div>
+      <div class="ts-tags">${era.media.map((m) => `
+        <div class="ts-tag">
+          <div class="ts-art">${tagArtHtml(m)}</div>
+          <div class="ts-year">${m.year || m.caption}</div>
+        </div>`).join("")}</div>
+    </div>`).join("");
+  return `<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<style>
+  ${sharedStyle()}
+  .ts-head { text-align: center; margin: 26px 0 22px; }
+  .ts-head h2 { margin: 0; font-size: 46px; color: #1a1a1a; letter-spacing: 4px; }
+  .ts-list { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 18px; padding-bottom: 120px; }
+  .ts-row { display: flex; align-items: center; gap: 18px; background: #fffdf6; border: 1.5px solid #262019;
+    border-radius: 14px; padding: 14px 18px; }
+  .ts-left { width: 250px; flex: none; }
+  .ts-range { display: inline-block; background: #262019; color: #f0f0ee; font-size: 15px; font-weight: 700;
+    padding: 3px 10px; border-radius: 6px; white-space: nowrap; }
+  .ts-name { margin-top: 8px; font-size: 23px; font-weight: 800; color: #262019; line-height: 1.3; }
+  .ts-tags { flex: 1; display: flex; gap: 12px; }
+  .ts-tag { width: 200px; text-align: center; }
+  .ts-art { height: 150px; background: ${TAG_FRAME_BG}; border: 1.5px solid #1a1a1a; border-radius: 10px;
+    box-shadow: inset 0 0 24px rgba(120,105,80,.18);
+    display: flex; align-items: center; justify-content: center; overflow: hidden; }
+  .ts-art img { max-width: calc(100% - 20px); max-height: calc(100% - 16px); mix-blend-mode: multiply;
+    filter: brightness(1.07) contrast(1.06); }
+  .ts-art svg { max-width: 80%; max-height: 80%; }
+  .ts-year { margin-top: 6px; font-size: 17px; font-weight: 800; color: #262019; }
+  .ts-closing { position: absolute; left: 66px; right: 66px; bottom: 92px; text-align: center; font-size: 21px; color: #4a4a47; }
+</style>
+</head>
+<body>
+  <div class="slide">
+    <div class="topbar">
+      <div class="brand">${BRAND} ・ ${SERIES}</div>
+      <div class="page">${index} / ${total}</div>
+    </div>
+    <div class="ts-head"><h2 class="display-title">${summaryData.heading}</h2></div>
+    <div class="ts-list">${rows}</div>
+    <div class="ts-closing">${summaryData.closing}</div>
+    <div class="swipe-hint-sub">SWIPE →</div>
+    <div class="flourish">${SERIES}</div>
+  </div>
+</body>
+</html>`;
+}
+
 const ACTION_ICONS = {
   save: `<path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>`,
   follow: `<circle cx="9" cy="8" r="4"/><path d="M2 21v-1a7 7 0 0 1 14 0v1"/><path d="M19 8v6M16 11h6"/>`,
@@ -958,7 +1170,7 @@ await page.screenshot({ path: coverPath, clip: { x: 0, y: 0, width: WIDTH, heigh
 console.log(`Saved: ${coverPath}`);
 
 for (let i = 0; i < pageSpreads.length; i++) {
-  const html = spreadHtml(pageSpreads[i], i + 2, total);
+  const html = meta.layout === "tagArchive" ? tagChapterHtml(pageSpreads[i][0], i + 2, total) : spreadHtml(pageSpreads[i], i + 2, total);
   await page.setContent(html, { waitUntil: "load" });
   const outPath = path.join(OUT_DIR, `${PREFIX}_${String(i + 2).padStart(2, "0")}.png`);
   await page.screenshot({ path: outPath, clip: { x: 0, y: 0, width: WIDTH, height: HEIGHT } });
@@ -966,7 +1178,8 @@ for (let i = 0; i < pageSpreads.length; i++) {
 }
 
 const summaryIndex = pageSpreads.length + 2;
-await page.setContent(summaryHtml(eras, summary, summaryIndex, total), { waitUntil: "load" });
+const summaryPageHtml = meta.layout === "tagArchive" ? tagSummaryHtml(eras, summary, summaryIndex, total) : summaryHtml(eras, summary, summaryIndex, total);
+await page.setContent(summaryPageHtml, { waitUntil: "load" });
 const summaryPath = path.join(OUT_DIR, `${PREFIX}_${String(summaryIndex).padStart(2, "0")}_summary.png`);
 await page.screenshot({ path: summaryPath, clip: { x: 0, y: 0, width: WIDTH, height: HEIGHT } });
 console.log(`Saved: ${summaryPath}`);

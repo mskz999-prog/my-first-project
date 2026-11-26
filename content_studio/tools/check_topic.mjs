@@ -35,6 +35,8 @@ for (const p of pages) {
     if (!m.photo) { problems.push(`${p.range}「${m.caption}」: photo（保存先）が無い`); continue; }
     if (firstUse.has(m.photo)) continue; // 使い回し（2回目以降）は gemini/ref 不要
     firstUse.add(m.photo);
+    // meta.ownPhotos: 本人撮影の写真をそのまま使うトピック（Five Brotherタグ等）はGemini/参考写真が不要
+    if (mod.meta.ownPhotos) continue;
     if (!m.gemini) problems.push(`${p.range}「${m.caption}」: 初出なのに gemini（プロンプト）が無い`);
     if (!m.ref) problems.push(`${p.range}「${m.caption}」: ref（参考写真）が無い`);
     else if (!exists(m.ref)) problems.push(`${p.range}「${m.caption}」: 参考写真ファイルが無い（${m.ref}）`);
@@ -42,7 +44,7 @@ for (const p of pages) {
 }
 for (const r of mod.meta.heroRefs || [mod.meta.heroRef].filter(Boolean))
   if (!exists(r)) problems.push(`表紙の参考写真ファイルが無い（${r}）`);
-if (!mod.meta.heroGemini) problems.push("表紙の heroGemini（プロンプト）が無い");
+if (!mod.meta.heroGemini && !mod.meta.ownPhotos) problems.push("表紙の heroGemini（プロンプト）が無い");
 
 const slots = slotsOf(mod);
 const done = slots.filter((s) => exists(s.photo)).length;
